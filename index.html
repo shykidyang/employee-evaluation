@@ -830,10 +830,7 @@
         const EMAILJS_TEMPLATE_ID = 'template_shykidyang';
         const EMAILJS_PUBLIC_KEY = 'H_bJpsTkhCwpMXpUf';
         
-        // Token 存储 key
-        const LOGIN_TOKENS_KEY = 'login_tokens_v2';
-        
-        // 获取当前页面地址（部署到 Gitee 后会自动变为 gitee.io 地址）
+        // 获取当前页面地址（部署到 GitHub Pages 后会自动变为正确的线上地址）
         function getSiteBaseURL() {
             return window.location.origin + window.location.pathname;
         }
@@ -1020,29 +1017,40 @@
             }
         }
         
-        // 登录链接方式：通过 token 在 localStorage 中验证身份（纯前端）
+        // 登录链接方式：解析 URL 中的加密身份信息（纯前端，无需服务器）
         function handleLinkLogin(token) {
-            const savedTokens = JSON.parse(localStorage.getItem(LOGIN_TOKENS_KEY) || '{}');
-            const tokenData = savedTokens[token];
-            
-            if (!tokenData) {
+            try {
+                // token 格式: Base64(JSON.stringify({id, name, role, email, ts}))
+                const decoded = JSON.parse(atob(token));
+                
+                // 验证是否包含必要字段
+                if (!decoded.id || !decoded.name || !decoded.role) {
+                    throw new Error('缺少必要字段');
+                }
+                
+                // 验证员工是否在列表中
+                const empExists = DEFAULT_EMPLOYEES.some(e => e.id === decoded.id && e.name === decoded.name);
+                if (!empExists) {
+                    throw new Error('员工不存在');
+                }
+                
+                currentUser = {
+                    id: decoded.id,
+                    name: decoded.name,
+                    role: decoded.role,
+                    email: decoded.email || ''
+                };
+                localStorage.setItem('current_user_v2', JSON.stringify(currentUser));
+                // 清除 URL 中的 token 参数（避免泄露）
+                const url = new URL(window.location.href);
+                url.searchParams.delete('token');
+                window.history.replaceState({}, '', url.pathname);
+                showMainInterface();
+            } catch (e) {
+                console.error('登录链接解析失败:', e);
                 showLoginInterface();
                 setTimeout(() => showLoginError('登录链接无效，请联系管理员重新发送'), 100);
-                return;
             }
-            
-            currentUser = {
-                id: tokenData.empId,
-                name: tokenData.empName,
-                role: tokenData.empRole,
-                email: tokenData.empEmail
-            };
-            localStorage.setItem('current_user_v2', JSON.stringify(currentUser));
-            // 清除 URL 中的 token 参数（避免泄露）
-            const url = new URL(window.location.href);
-            url.searchParams.delete('token');
-            window.history.replaceState({}, '', url.pathname);
-            showMainInterface();
         }
         
         function verifyLinkCode() {
@@ -1447,17 +1455,19 @@
         }
         
         // ==========================================
-        // EmailJS 邮件发送 + Token 管理（纯前端）
+        // EmailJS 邮件发送（纯前端）
         // ==========================================
         
-        // 生成随机 token（32位十六进制）
-        function generateToken() {
-            const chars = 'abcdef0123456789';
-            let token = '';
-            for (let i = 0; i < 32; i++) {
-                token += chars[Math.floor(Math.random() * chars.length)];
-            }
-            return token;
+        // 生成登录 token（Base64 编码的员工身份信息）
+        function generateLoginToken(emp) {
+            const data = {
+                id: emp.id,
+                name: emp.name,
+                role: emp.role,
+                email: emp.email,
+                ts: Date.now()
+            };
+            return btoa(JSON.stringify(data));
         }
         
         // 通过 EmailJS 发送登录链接邮件
@@ -1491,21 +1501,12 @@
                 return;
             }
             
-            // 生成 token 并保存
-            const savedTokens = JSON.parse(localStorage.getItem(LOGIN_TOKENS_KEY) || '{}');
+            // 生成登录链接
             const results = [];
             
             selected.forEach(emp => {
-                const token = generateToken();
-                const loginLink = getSiteBaseURL() + '?token=' + token;
-                
-                savedTokens[token] = {
-                    empId: emp.id,
-                    empName: emp.name,
-                    empRole: emp.role,
-                    empEmail: emp.email,
-                    createdAt: Date.now()
-                };
+                const token = generateLoginToken(emp);
+                const loginLink = getSiteBaseURL() + '?token=' + encodeURIComponent(token);
                 
                 results.push({
                     name: emp.name,
@@ -1514,8 +1515,6 @@
                     link: loginLink
                 });
             });
-            
-            localStorage.setItem(LOGIN_TOKENS_KEY, JSON.stringify(savedTokens));
             
             // 显示发送中状态
             const content = document.getElementById('linkResultContent');
@@ -1638,8 +1637,6 @@
                 lastUpdated: new Date().toISOString()
             };
             saveState();
-            
-            localStorage.removeItem(LOGIN_TOKENS_KEY);
             
             initProgressPage();
             initEmployeesTable();
