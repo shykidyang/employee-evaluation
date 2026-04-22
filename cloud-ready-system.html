@@ -1494,9 +1494,11 @@
         // 发送登录链接给选中员工
         function sendLoginLinks() {
             try {
+            console.log('sendLoginLinks 被调用, EMPLOYEES 数量:', EMPLOYEES.length);
             const selected = [];
             EMPLOYEES.filter(e => e.role === 'staff').forEach(emp => {
                 const cb = document.getElementById('link_' + emp.id);
+                console.log('员工:', emp.name, 'id:', emp.id, 'checkbox:', cb ? 'found' : 'NOT FOUND', cb ? 'checked:' + cb.checked : '');
                 if (cb && cb.checked) {
                     selected.push(emp);
                 }
@@ -1533,8 +1535,12 @@
             
             // 通过 EmailJS 逐个发送邮件
             Promise.all(results.map(async r => {
-                const result = await sendLoginEmail(r.email, r.name, r.link);
-                return { ...r, success: result.success, message: result.message };
+                try {
+                    const result = await sendLoginEmail(r.email, r.name, r.link);
+                    return { ...r, success: result.success, message: result.message };
+                } catch (err) {
+                    return { ...r, success: false, message: err.message || err.text || '发送异常' };
+                }
             })).then(emailResults => {
                 const successCount = emailResults.filter(r => r.success).length;
                 const failCount = emailResults.filter(r => !r.success).length;
@@ -1580,6 +1586,9 @@
                         链接永久有效，员工点击即可自动登录
                     </p>
                 `;
+            }).catch(err => {
+                console.error('批量发送邮件失败:', err);
+                content.innerHTML = '<div class="alert alert-error">发送过程中出错: ' + (err.message || err.text || '未知错误') + '</div>';
             });
             
             deselectAllEmployees();
