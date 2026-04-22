@@ -1493,9 +1493,11 @@
         
         // 发送登录链接给选中员工
         function sendLoginLinks() {
+            try {
             const selected = [];
             EMPLOYEES.filter(e => e.role === 'staff').forEach(emp => {
-                if (document.getElementById(`link_${emp.id}`).checked) {
+                const cb = document.getElementById('link_' + emp.id);
+                if (cb && cb.checked) {
                     selected.push(emp);
                 }
             });
@@ -1581,6 +1583,10 @@
             });
             
             deselectAllEmployees();
+            } catch (e) {
+                console.error('sendLoginLinks 错误:', e);
+                alert('发送链接时出错: ' + e.message);
+            }
         }
         
         function closeLinkResultModal() {
