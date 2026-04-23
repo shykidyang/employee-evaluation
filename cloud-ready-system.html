@@ -812,6 +812,9 @@
         // 初始化
         // ==========================================
         function init() {
+            // 记录是否是首次访问（在 loadEmployees 写入 localStorage 之前判断）
+            const isFirstVisit = !localStorage.getItem('employees_v2_data');
+            
             loadEmployees();
             loadState();
             
@@ -830,6 +833,17 @@
                 const userExists = EMPLOYEES.some(e => e.id === user.id);
                 if (userExists) {
                     currentUser = user;
+                    showMainInterface();
+                    return;
+                }
+            }
+            
+            // 首次访问：自动以管理员身份登录
+            if (isFirstVisit) {
+                const admin = EMPLOYEES.find(e => e.role === 'director');
+                if (admin) {
+                    currentUser = { id: admin.id, name: admin.name, role: 'director', email: admin.email };
+                    localStorage.setItem('current_user_v2', JSON.stringify(currentUser));
                     showMainInterface();
                     return;
                 }
