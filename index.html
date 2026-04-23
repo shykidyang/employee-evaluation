@@ -7,7 +7,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; font-size: 13px; }
-        .container { max-width: 1000px; margin: 0 auto; padding: 12px; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 6px; }
         .login-container { max-width: 420px; margin: 60px auto; animation: fadeIn 0.5s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .card { background: white; border-radius: 14px; padding: 28px 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.15); }
@@ -25,12 +25,12 @@
         .alert-error { background: #fee2e2; color: #991b1b; border-left: 4px solid #ef4444; }
         .alert-success { background: #d1fae5; color: #065f46; border-left: 4px solid #10b981; }
         .alert-info { background: #dbeafe; color: #1e40af; border-left: 4px solid #3b82f6; }
-        .header { background: white; border-radius: 12px; padding: 12px 18px; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .header { background: white; border-radius: 12px; padding: 8px 14px; margin-bottom: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
         .user-info { display: flex; align-items: center; gap: 10px; }
-        .user-avatar { width: 36px; height: 36px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 15px; }
-        .user-details h3 { margin: 0; font-size: 15px; }
-        .user-details p { margin: 2px 0 0; color: #6b7280; font-size: 11px; }
-        .main-content { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); min-height: 400px; }
+        .user-avatar { width: 30px; height: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; }
+        .user-details h3 { margin: 0; font-size: 14px; }
+        .user-details p { margin: 1px 0 0; color: #6b7280; font-size: 10px; }
+        .main-content { background: white; border-radius: 12px; padding: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); min-height: 400px; }
         .score-stats { display: flex; gap: 12px; margin-bottom: 14px; padding: 10px; background: #f3f4f6; border-radius: 8px; }
         .score-stat { flex: 1; text-align: center; padding: 8px; border-radius: 6px; }
         .score-stat.high { background: #d1fae5; }
@@ -39,23 +39,23 @@
         .score-stat-value { font-size: 20px; font-weight: bold; }
         .score-stat-label { font-size: 11px; color: #6b7280; margin-top: 3px; }
         .score-btn-group { display: inline-flex; border-radius: 6px; overflow: hidden; border: 1.5px solid #e0e6ed; }
-        .score-btn { padding: 7px 14px; border: none; background: white; cursor: pointer; font-weight: bold; font-size: 13px; transition: all 0.2s; }
+        .score-btn { padding: 4px 12px; border: none; background: white; cursor: pointer; font-weight: bold; font-size: 12px; transition: all 0.2s; }
         .score-btn:not(:last-child) { border-right: 1px solid #e0e6ed; }
         .score-btn:hover { background: #f3f4f6; }
         .score-btn.selected { color: white; }
         .score-btn.selected.score-90 { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
         .score-btn.selected.score-75 { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
         .score-btn.selected.score-60 { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
-        .evaluation-item { background: #f9fafb; border-radius: 6px; padding: 9px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
-        .employee-info { display: flex; align-items: center; gap: 8px; }
-        .employee-avatar { width: 30px; height: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; }
-        .employee-name { font-weight: 600; color: #374151; font-size: 13px; }
-        .action-buttons { display: flex; gap: 8px; margin-top: 14px; }
+        .evaluation-item { background: #f9fafb; border-radius: 6px; padding: 5px 10px; margin-bottom: 3px; display: flex; justify-content: space-between; align-items: center; }
+        .employee-info { display: flex; align-items: center; gap: 6px; }
+        .employee-avatar { width: 24px; height: 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 11px; }
+        .employee-name { font-weight: 600; color: #374151; font-size: 12px; }
+        .action-buttons { display: flex; gap: 8px; margin-top: 10px; }
         .action-buttons .btn { flex: 1; }
-        .rules-box { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 10px; padding: 14px; margin-bottom: 14px; border-left: 3px solid #f59e0b; }
-        .rules-box h4 { color: #92400e; margin-bottom: 6px; font-size: 13px; }
-        .rules-box ul { margin-left: 16px; color: #78350f; font-size: 12px; }
-        .rules-box li { margin-bottom: 3px; font-size: 12px; }
+        .rules-box { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; border-left: 3px solid #f59e0b; }
+        .rules-box h4 { color: #92400e; margin-bottom: 3px; font-size: 12px; }
+        .rules-box ul { margin-left: 14px; color: #78350f; font-size: 11px; }
+        .rules-box li { margin-bottom: 1px; font-size: 11px; }
         .badge { padding: 3px 8px; border-radius: 14px; font-size: 11px; font-weight: 600; }
         .badge-director { background: rgba(79, 70, 229, 0.1); color: #4f46e5; }
         .hidden { display: none !important; }
