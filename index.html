@@ -264,7 +264,7 @@
     async function handleLinkLogin(token) {
         // 先显示加载状态
         showLoginInterface();
-        document.getElementById('loginWaiting').innerHTML = '<div class="spinner"></div> 正在连接服务器...';
+        document.getElementById('loginWaiting').innerHTML = '<div class="spinner"></div> 正在验证登录信息...';
         document.getElementById('loginWaiting').classList.remove('hidden');
         document.getElementById('loginError').classList.add('hidden');
         document.getElementById('logoutNotice').classList.add('hidden');
@@ -272,9 +272,14 @@
             const decoded = JSON.parse(decodeURIComponent(escape(atob(token))));
             if (!decoded.id || !decoded.name || !decoded.role) throw new Error('缺少必要字段');
             if (decoded.role === 'director') throw new Error('请使用管理员页面登录');
-            // 先从云端拉取最新员工列表，再校验
-            await fetchJSONBin();
-            const empExists = EMPLOYEES.some(e => e.id === decoded.id && e.name === decoded.name);
+            // 先用本地 employees 校验，不等云端（避免 JSONBin 慢导致超时）
+            let empExists = EMPLOYEES.some(e => e.id === decoded.id && e.name === decoded.name);
+            if (!empExists) {
+                // 本地没有，尝试从云端拉（只等一次，15秒超时）
+                document.getElementById('loginWaiting').innerHTML = '<div class="spinner"></div> 本地未找到，正在从云端同步...';
+                await fetchJSONBin();
+                empExists = EMPLOYEES.some(e => e.id === decoded.id && e.name === decoded.name);
+            }
             if (!empExists) throw new Error('员工不存在');
             // 从 EMPLOYEES 获取完整信息（含 email）
             const emp = EMPLOYEES.find(e => e.id === decoded.id);
@@ -283,9 +288,11 @@
             const url = new URL(window.location.href);
             url.searchParams.delete('token');
             window.history.replaceState({}, '', url.pathname);
-            // 确保 systemData 已初始化（防止 null 导致 evaluations 报错）
+            // 确保 systemData 已初始化
             if (!systemData) systemData = JSON.parse(localStorage.getItem(STATE_KEY) || 'null') || { evaluations: {}, lastUpdated: new Date().toISOString() };
             showMainInterface();
+            // 登录成功后，后台异步同步云端数据
+            fetchJSONBin();
         } catch (e) {
             console.error('登录链接解析失败:', e);
             showLoginInterface();
