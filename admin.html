@@ -224,6 +224,10 @@
             <!-- 发送链接 -->
             <div id="sendlinkTab" class="tab-content hidden">
                 <div class="rules-box"><h4>&#128231; 发送登录链接</h4><ul><li>勾选需要发送链接的员工（管理员通过本页面直接登录，无需发送）</li><li>系统将通过 EmailJS 发送含登录令牌的邮件</li><li>员工点击邮件中的链接即可自动登录</li></ul></div>
+                <div style="margin-bottom:12px;">
+                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;">&#128236; 邮件标题</label>
+                    <input type="text" id="emailSubjectInput" placeholder="请输入邮件标题，如：部门内部互评系统 - 登录链接" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;" />
+                </div>
                 <div style="max-height:400px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:15px;"><div id="sendLinkList"></div></div>
                 <div class="action-buttons"><button class="btn btn-primary btn-sm" onclick="sendLoginLinks()">&#128231; 发送选中链接</button><button class="btn btn-secondary btn-sm" onclick="selectAllEmployees()">全选</button><button class="btn btn-secondary btn-sm" onclick="deselectAllEmployees()">取消全选</button></div>
             </div>
@@ -695,11 +699,11 @@
         return window.location.origin + basePath + 'index.html';
     }
 
-    async function sendLoginEmail(toEmail, toName, loginLink, retries) {
+    async function sendLoginEmail(toEmail, toName, loginLink, emailSubject, retries) {
         retries = retries || 2;
         for (let i = 0; i <= retries; i++) {
             try {
-                const result = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { to_email: toEmail, to_name: toName, login_link: loginLink, system_name: '部门内部互评系统' });
+                const result = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { to_email: toEmail, to_name: toName, login_link: loginLink, subject: emailSubject, system_name: '部门内部互评系统' });
                 return { success: true };
             } catch (e) {
                 if (i < retries) {
@@ -714,6 +718,8 @@
 
     async function sendLoginLinks() {
         try {
+            const emailSubject = (document.getElementById('emailSubjectInput').value || '').trim();
+            if (!emailSubject) { showToast('请输入邮件标题', 'warning'); document.getElementById('emailSubjectInput').focus(); return; }
             const selected = [];
             EMPLOYEES.filter(e => e.role !== 'director').forEach(emp => {
                 const cb = document.getElementById('link_' + emp.id);
@@ -736,7 +742,7 @@
             const detailList = [];
             for (let i = 0; i < results.length; i++) {
                 const r = results[i];
-                const res = await sendLoginEmail(r.email, r.name, r.link);
+                const res = await sendLoginEmail(r.email, r.name, r.link, emailSubject);
                 if (res.success) ok++; else fail++;
                 detailList.push({ ...r, success: res.success });
                 // 更新进度
@@ -763,6 +769,7 @@
                 const failedList = detailList.filter(d => !d.success);
                 content.innerHTML += '<div style="margin-top:12px;text-align:center;"><button onclick="retryFailedEmails()" class="nav-tab" style="padding:8px 20px;border-radius:6px;cursor:pointer;background:#f59e0b;color:#fff;border:none;font-size:14px;">&#128260; 重试发送失败邮件（' + failedList.length + ' 封）</button></div>';
                 window._failedEmails = failedList;
+                window._lastEmailSubject = emailSubject;
             }
             deselectAllEmployees();
         } catch (e) { showToast('发送链接时出错: ' + e.message, 'error'); }
@@ -775,7 +782,7 @@
         const detailList = [];
         for (let i = 0; i < failed.length; i++) {
             const r = failed[i];
-            const res = await sendLoginEmail(r.email, r.name, r.link);
+            const res = await sendLoginEmail(r.email, r.name, r.link, window._lastEmailSubject);
             detailList.push({ ...r, success: res.success });
             if (i < failed.length - 1) await new Promise(s => setTimeout(s, 1000));
         }
