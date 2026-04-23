@@ -1020,8 +1020,8 @@
         // 登录链接方式：解析 URL 中的加密身份信息（纯前端，无需服务器）
         function handleLinkLogin(token) {
             try {
-                // token 格式: Base64(JSON.stringify({id, name, role, email, ts}))
-                const decoded = JSON.parse(atob(token));
+                // token 格式: Base64(encodeURIComponent(JSON.stringify({id, name, role, email, ts})))
+                const decoded = JSON.parse(decodeURIComponent(Array.from(atob(token), c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
                 
                 // 验证是否包含必要字段
                 if (!decoded.id || !decoded.name || !decoded.role) {
@@ -1462,7 +1462,7 @@
         // EmailJS 邮件发送（纯前端）
         // ==========================================
         
-        // 生成登录 token（Base64 编码的员工身份信息）
+        // 生成登录 token（Base64 编码的员工身份信息，支持中文）
         function generateLoginToken(emp) {
             const data = {
                 id: emp.id,
@@ -1471,7 +1471,8 @@
                 email: emp.email,
                 ts: Date.now()
             };
-            return btoa(JSON.stringify(data));
+            // btoa 不支持中文，用 encodeURIComponent 转义后再编码
+            return btoa(encodeURIComponent(JSON.stringify(data)).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode('0x' + p1)));
         }
         
         // 通过 EmailJS 发送登录链接邮件
