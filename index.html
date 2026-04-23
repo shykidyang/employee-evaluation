@@ -142,8 +142,7 @@
         { id: '11', name: '吴波', role: 'staff', phone: '13388110528', email: 'mywubo.sc@chinatelecom.cn' },
         { id: '12', name: '高竹英', role: 'staff', phone: '13388111635', email: 'mygaozhuying.sc@chinatelecom.cn' },
         { id: '13', name: '杜小东', role: 'staff', phone: '13388113150', email: 'myduxiaodong.sc@chinatelecom.cn' },
-        { id: '14', name: '张艺林', role: 'staff', phone: '13388113568', email: 'zhangyl51@chinatelecom.cn' },
-        { id: '15', name: '老杨', role: 'tester', phone: '13800000000', email: 'yanghongjun.sc@chinatelecom.cn' }
+        { id: '14', name: '张艺林', role: 'staff', phone: '13388113568', email: 'zhangyl51@chinatelecom.cn' }
     ];
 
     const SCORE_RULES = { HIGH_MAX: 4, LOW_MIN: 2 };
@@ -316,25 +315,7 @@
         const list = document.getElementById('evaluationList');
         list.innerHTML = '';
 
-        // tester 角色：展示测试界面（可以对所有人评分，包括领导和员工）
-        if (currentUser.role === 'tester') {
-            document.querySelector('.rules-box').style.display = 'none';
-            document.getElementById('userName').textContent = currentUser.name + ' [测试]';
-            const evaluatees = EMPLOYEES.filter(e => e.id !== currentUser.id);
-            const myEval = systemData.evaluations[currentUser.id] || {};
-            evaluatees.forEach(emp => {
-                const s = myEval[emp.id] || null;
-                const roleTag = emp.role === 'director' ? ' <span style="color:#ef4444;font-size:10px;">[管理员]</span>' : emp.role === 'deputy' ? ' <span style="color:#f59e0b;font-size:10px;">[副职]</span>' : emp.role === 'tester' ? ' <span style="color:#6b7280;font-size:10px;">[测试]</span>' : '';
-                list.innerHTML += '<div class="evaluation-item"><div class="employee-info"><div class="employee-avatar">' + emp.name[0] + '</div><div class="employee-name">' + emp.name + roleTag + '</div></div><div><div class="score-btn-group">' +
-                    '<button class="score-btn score-90 ' + (s === 90 ? 'selected' : '') + '" onclick="setScore(\'' + emp.id + '\',90)">90</button>' +
-                    '<button class="score-btn score-75 ' + (s === 75 ? 'selected' : '') + '" onclick="setScore(\'' + emp.id + '\',75)">75</button>' +
-                    '<button class="score-btn score-60 ' + (s === 60 ? 'selected' : '') + '" onclick="setScore(\'' + emp.id + '\',60)">60</button></div></div></div>';
-            });
-            updateScoreCounts();
-            return;
-        }
-
-        // 普通员工/副职：只看到 staff 角色（排除 tester）
+        // 副职/普通员工：只看到 staff 角色
         document.querySelector('.rules-box').style.display = '';
         document.getElementById('userName').textContent = currentUser.name;
         let evaluatees = [];

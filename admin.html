@@ -312,8 +312,7 @@
         { id: '11', name: '吴波', role: 'staff', phone: '13388110528', email: 'mywubo.sc@chinatelecom.cn' },
         { id: '12', name: '高竹英', role: 'staff', phone: '13388111635', email: 'mygaozhuying.sc@chinatelecom.cn' },
         { id: '13', name: '杜小东', role: 'staff', phone: '13388113150', email: 'myduxiaodong.sc@chinatelecom.cn' },
-        { id: '14', name: '张艺林', role: 'staff', phone: '13388113568', email: 'zhangyl51@chinatelecom.cn' },
-        { id: '15', name: '老杨', role: 'tester', phone: '13800000000', email: 'yanghongjun.sc@chinatelecom.cn' }
+        { id: '14', name: '张艺林', role: 'staff', phone: '13388113568', email: 'zhangyl51@chinatelecom.cn' }
     ];
 
     let EMPLOYEES = [];
@@ -575,11 +574,10 @@
     // 评价进度
     // ==========================================
     function initStatusPage() {
-        const staff = EMPLOYEES.filter(e => e.role === 'staff'); // 只统计真实员工
+        const staff = EMPLOYEES.filter(e => e.role === 'staff');
         let completed = 0, totalEvals = 0;
         const details = [];
         EMPLOYEES.forEach(emp => {
-            if (emp.role === 'tester') return; // tester 不显示在进度中
             const req = (emp.role === 'director' || emp.role === 'deputy') ? staff.length : staff.length - 1;
             const myEval = systemData.evaluations[emp.id];
             const cnt = myEval ? Object.keys(myEval).length : 0;
@@ -673,14 +671,14 @@
     // 发送登录链接
     // ==========================================
     function initSendLinkList() {
-        document.getElementById('sendLinkList').innerHTML = EMPLOYEES.filter(e => e.role !== 'director' && e.role !== 'tester').map(emp => {
+        document.getElementById('sendLinkList').innerHTML = EMPLOYEES.filter(e => e.role !== 'director').map(emp => {
             const tag = emp.role === 'deputy' ? '<span style="color:#f59e0b;font-size:11px;font-weight:bold;margin-left:6px;">[副职]</span>' : '';
             return '<div class="checkbox-item"><input type="checkbox" id="link_' + emp.id + '" value="' + emp.id + '">' +
                 '<div class="checkbox-label"><strong>' + emp.name + '</strong>' + tag +
                 '<span style="color:#6b7280;font-size:12px;margin-left:10px;">' + emp.email + '</span></div></div>';
         }).join('');
     }
-    function selectAllEmployees() { EMPLOYEES.filter(e => e.role !== 'director' && e.role !== 'tester').forEach(e => { const cb = document.getElementById('link_' + e.id); if (cb) cb.checked = true; }); }
+    function selectAllEmployees() { EMPLOYEES.filter(e => e.role !== 'director').forEach(e => { const cb = document.getElementById('link_' + e.id); if (cb) cb.checked = true; }); }
     function deselectAllEmployees() { document.querySelectorAll('#sendLinkList input[type="checkbox"]').forEach(cb => cb.checked = false); }
 
     function generateLoginToken(emp) {
@@ -704,7 +702,7 @@
     function sendLoginLinks() {
         try {
             const selected = [];
-            EMPLOYEES.filter(e => e.role !== 'director' && e.role !== 'tester').forEach(emp => {
+            EMPLOYEES.filter(e => e.role !== 'director').forEach(emp => {
                 const cb = document.getElementById('link_' + emp.id);
                 if (cb && cb.checked) selected.push(emp);
             });
@@ -771,7 +769,7 @@
     function initEmployeesTable() {
         document.getElementById('empCount').textContent = EMPLOYEES.length;
         document.getElementById('employeesTable').innerHTML = EMPLOYEES.map((emp, i) => {
-            const tag = emp.role === 'director' ? ' <span style="color:#ef4444;font-size:11px;">[管理员]</span>' : emp.role === 'deputy' ? ' <span style="color:#f59e0b;font-size:11px;">[副职]</span>' : emp.role === 'tester' ? ' <span style="color:#6b7280;font-size:11px;">[测试]</span>' : '';
+            const tag = emp.role === 'director' ? ' <span style="color:#ef4444;font-size:11px;">[管理员]</span>' : emp.role === 'deputy' ? ' <span style="color:#f59e0b;font-size:11px;">[副职]</span>' : '';
             return '<tr><td style="text-align:center;font-weight:600;color:#6b7280;">' + (i+1) + '</td>' +
                 '<td class="editable-cell" onclick="editEmployee(\'' + emp.id + '\',\'name\')">' + emp.name + tag + '</td>' +
                 '<td class="editable-cell" onclick="editEmployee(\'' + emp.id + '\',\'phone\')">' + emp.phone + '</td>' +
@@ -840,7 +838,6 @@
                     if (ev.role === 'director') ds.push(score);
                     else if (ev.role === 'deputy') dpts.push(score);
                     else if (ev.role === 'staff') ss.push(score);
-                    // tester 的评分记录在 allSources 中展示，但不参与计算
                 }
             }
         });
@@ -939,8 +936,8 @@
 
             // 评分来源标签
             const sourceTags = r.allSources.map(s => {
-                const roleLabel = s.evaluatorRole === 'director' ? '正职' : s.evaluatorRole === 'deputy' ? '副职' : s.evaluatorRole === 'tester' ? '测试' : '';
-                const cls = s.evaluatorRole === 'director' ? 'director' : s.evaluatorRole === 'deputy' ? 'deputy' : s.evaluatorRole === 'tester' ? 'missing' : 'staff';
+                const roleLabel = s.evaluatorRole === 'director' ? '正职' : s.evaluatorRole === 'deputy' ? '副职' : '';
+                const cls = s.evaluatorRole === 'director' ? 'director' : s.evaluatorRole === 'deputy' ? 'deputy' : 'staff';
                 return '<span class="score-tag ' + cls + '">' + (roleLabel ? roleLabel + ' ' : '') + s.evaluatorName + ': ' + s.score + '</span>';
             }).join('');
 
