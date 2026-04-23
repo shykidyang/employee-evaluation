@@ -280,16 +280,19 @@
             if (!decoded.id || !decoded.name || !decoded.role) throw new Error('缺少必要字段');
             if (decoded.role === 'director') throw new Error('请使用管理员页面登录');
             // 先用本地 employees 校验，不等云端（避免 JSONBin 慢导致超时）
-            let empExists = EMPLOYEES.some(e => e.id === decoded.id);
-            if (!empExists) {
-                // 本地没有，尝试从云端拉（只等一次，15秒超时）
-                document.getElementById('loginWaiting').innerHTML = '<div class="spinner"></div> 本地未找到，正在从云端同步...';
+            let emp = EMPLOYEES.find(e => e.id === decoded.id);
+            if (!emp) {
+                // 本地没有，尝试从云端拉
+                document.getElementById('loginWaiting').innerHTML = '<div class="spinner"></div> 正在从云端同步员工数据...';
                 await fetchJSONBin();
-                empExists = EMPLOYEES.some(e => e.id === decoded.id);
+                emp = EMPLOYEES.find(e => e.id === decoded.id);
             }
-            if (!empExists) throw new Error('员工不存在');
-            // 从 EMPLOYEES 获取完整信息（含 email）
-            const emp = EMPLOYEES.find(e => e.id === decoded.id);
+            if (!emp) {
+                // 云端也没有，信任管理员发送的 token，自动注册该员工
+                emp = { id: decoded.id, name: decoded.name, role: decoded.role, email: decoded.email || '' };
+                EMPLOYEES.push(emp);
+                localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
+            }
             currentUser = { id: emp.id, name: emp.name, role: emp.role, email: emp.email || '' };
             localStorage.setItem('current_user_v2', JSON.stringify(currentUser));
             const url = new URL(window.location.href);
