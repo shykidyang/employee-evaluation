@@ -194,6 +194,11 @@
             const json = await res.json();
             if (json.record && json.record.evaluations) {
                 const cloudData = json.record;
+                // 同步员工列表（如果云端有则覆盖本地）
+                if (cloudData.employees && cloudData.employees.length > 0) {
+                    EMPLOYEES = cloudData.employees;
+                    localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
+                }
                 // 云端数据比本地新才覆盖
                 if (!systemData.lastUpdated || cloudData.lastUpdated > systemData.lastUpdated) {
                     systemData = cloudData;
