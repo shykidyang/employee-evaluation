@@ -174,7 +174,14 @@
     }
 
     function loadEmployees() {
-        // 始终以 DEFAULT_EMPLOYEES 为准，确保与最新代码一致
+        // 优先级：localStorage > 云端（fetchJSONBin中处理） > DEFAULT_EMPLOYEES
+        const saved = localStorage.getItem('employees_v2_data');
+        if (saved) {
+            try {
+                EMPLOYEES = JSON.parse(saved);
+                if (EMPLOYEES.length > 0) return;
+            } catch (e) { /* JSON损坏，使用默认 */ }
+        }
         EMPLOYEES = [...DEFAULT_EMPLOYEES];
         localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
     }
@@ -201,8 +208,11 @@
                         systemData = cloudData;
                         localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
                     }
-                    // 员工列表始终以本地 DEFAULT_EMPLOYEES 为准，不用云端覆盖
-                    // （避免云端旧数据格式不匹配导致员工列表异常）
+                    // 从云端同步员工列表（管理端新增的员工在此）
+                    if (cloudData.employees && cloudData.employees.length > EMPLOYEES.length) {
+                        EMPLOYEES = cloudData.employees;
+                        localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
+                    }
                 }
                 return; // 成功则退出
             } catch (e) {
