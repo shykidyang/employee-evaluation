@@ -166,7 +166,6 @@
             const user = JSON.parse(savedUser);
             if (EMPLOYEES.some(e => e.id === user.id)) {
                 currentUser = user;
-                // 等云端数据拉取完成后再渲染页面
                 loadState().then(() => { showMainInterface(); });
                 return;
             }
@@ -269,12 +268,13 @@
         initEvaluationPage();
     }
 
-    function handleLinkLogin(token) {
+    async function handleLinkLogin(token) {
         try {
             const decoded = JSON.parse(decodeURIComponent(Array.from(atob(token), c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
             if (!decoded.id || !decoded.name || !decoded.role) throw new Error('缺少必要字段');
-            // 不允许管理员通过员工页面登录
             if (decoded.role === 'director') throw new Error('请使用管理员页面登录');
+            // 先从云端拉取最新员工列表，再校验（解决新建员工后旧列表找不到的问题）
+            await fetchJSONBin();
             const empExists = EMPLOYEES.some(e => e.id === decoded.id && e.name === decoded.name);
             if (!empExists) throw new Error('员工不存在');
             currentUser = { id: decoded.id, name: decoded.name, role: decoded.role, email: decoded.email || '' };
@@ -282,8 +282,7 @@
             const url = new URL(window.location.href);
             url.searchParams.delete('token');
             window.history.replaceState({}, '', url.pathname);
-            // 等云端数据拉取完成后再渲染页面
-            loadState().then(() => { showMainInterface(); });
+            showMainInterface();
         } catch (e) {
             console.error('登录链接解析失败:', e);
             showLoginInterface();
