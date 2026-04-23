@@ -174,20 +174,9 @@
     }
 
     function loadEmployees() {
-        const saved = localStorage.getItem('employees_v2_data');
-        // 版本检查：如果本地缓存的员工数量或格式与默认不一致，重置为默认
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            if (parsed.length === DEFAULT_EMPLOYEES.length && parsed[0] && parsed[0].email && !parsed[0].phone) {
-                EMPLOYEES = parsed;
-            } else {
-                EMPLOYEES = [...DEFAULT_EMPLOYEES];
-                localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
-            }
-        } else {
-            EMPLOYEES = [...DEFAULT_EMPLOYEES];
-            localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
-        }
+        // 始终以 DEFAULT_EMPLOYEES 为准，确保与最新代码一致
+        EMPLOYEES = [...DEFAULT_EMPLOYEES];
+        localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
     }
     function loadState() {
         const saved = localStorage.getItem(STATE_KEY);
@@ -281,12 +270,12 @@
             if (!decoded.id || !decoded.name || !decoded.role) throw new Error('缺少必要字段');
             if (decoded.role === 'director') throw new Error('请使用管理员页面登录');
             // 先用本地 employees 校验，不等云端（避免 JSONBin 慢导致超时）
-            let empExists = EMPLOYEES.some(e => e.id === decoded.id && e.name === decoded.name);
+            let empExists = EMPLOYEES.some(e => e.id === decoded.id);
             if (!empExists) {
                 // 本地没有，尝试从云端拉（只等一次，15秒超时）
                 document.getElementById('loginWaiting').innerHTML = '<div class="spinner"></div> 本地未找到，正在从云端同步...';
                 await fetchJSONBin();
-                empExists = EMPLOYEES.some(e => e.id === decoded.id && e.name === decoded.name);
+                empExists = EMPLOYEES.some(e => e.id === decoded.id);
             }
             if (!empExists) throw new Error('员工不存在');
             // 从 EMPLOYEES 获取完整信息（含 email）
