@@ -339,9 +339,18 @@
     // 数据加载
     // ==========================================
     function init() {
-        loadEmployees(); loadState();
-        // loadState 是异步拉取云端，这里先用本地密码状态渲染登录页
-        // 云端密码会在 fetchJSONBin 完成后自动同步到 localStorage
+        loadEmployees();
+        // 先加载本地数据，再异步拉云端并确保 employees 上传
+        loadState().then(() => {
+            // fetchJSONBin 完成后，确保 systemData 包含最新 employees 并上传
+            if (EMPLOYEES.length > 0) {
+                systemData.employees = EMPLOYEES;
+                systemData.lastUpdated = new Date().toISOString();
+                localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
+                // 立即上传（不等防抖）
+                pushToJSONBin();
+            }
+        });
         if (sessionStorage.getItem('admin_logged_in') === 'true') { showMainInterface(); return; }
         if (!localStorage.getItem(ADMIN_PASSWORD_KEY)) {
             document.getElementById('loginForm').classList.add('hidden');
@@ -380,7 +389,7 @@
     function loadState() {
         const saved = localStorage.getItem(STATE_KEY);
         systemData = saved ? JSON.parse(saved) : { evaluations: {}, lastUpdated: new Date().toISOString() };
-        fetchJSONBin();
+        return fetchJSONBin(); // 返回 Promise
     }
     async function fetchJSONBin() {
         const headers = { 'Content-Type': 'application/json' };
@@ -388,23 +397,25 @@
         for (let retry = 0; retry < 3; retry++) {
             try {
                 const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), 8000);
+                const timer = setTimeout(() => controller.abort(), 15000);
                 const res = await fetch(JSONBIN_URL, { headers, signal: controller.signal });
                 clearTimeout(timer);
                 if (!res.ok) { if (retry < 2) await new Promise(r => setTimeout(r, 500)); continue; }
                 const json = await res.json();
                 if (json.record && json.record.evaluations) {
                     const cloudData = json.record;
+                    // 合并云端数据，但保留本地已有的 employees 和 adminPasswordHash
                     if (!systemData.lastUpdated || cloudData.lastUpdated > systemData.lastUpdated) {
                         systemData = cloudData;
-                        localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
                     }
+                    // employees 始终以本地为准（管理端是数据源头）
+                    const localEmp = JSON.parse(localStorage.getItem('employees_v2_data') || 'null');
+                    if (localEmp && localEmp.length > 0) {
+                        systemData.employees = localEmp;
+                    }
+                    localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
                     if (cloudData.adminPasswordHash && !localStorage.getItem(ADMIN_PASSWORD_KEY)) {
                         localStorage.setItem(ADMIN_PASSWORD_KEY, cloudData.adminPasswordHash);
-                    }
-                    if (cloudData.employees && cloudData.employees.length > 0) {
-                        EMPLOYEES = cloudData.employees;
-                        localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
                     }
                 }
                 return;
@@ -427,7 +438,7 @@
         for (let retry = 0; retry < 3; retry++) {
             try {
                 const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), 10000);
+                const timer = setTimeout(() => controller.abort(), 20000);
                 const res = await fetch(JSONBIN_UPDATE_URL, {
                     method: 'PUT',
                     headers,
