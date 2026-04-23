@@ -108,7 +108,32 @@
         .eval-stat.low { background: #fee2e2; }
         .eval-stat-val { font-size: 20px; font-weight: bold; }
         .eval-stat-lbl { font-size: 11px; color: #6b7280; margin-top: 3px; }
-        @media (max-width: 768px) { .header { flex-direction: column; gap: 15px; text-align: center; } .nav-tabs { flex-wrap: wrap; justify-content: center; } .stats-grid { grid-template-columns: repeat(2, 1fr); } .eval-item { flex-direction: column; gap: 10px; align-items: flex-start; } }
+        .result-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; margin-bottom: 14px; }
+        .result-summary-item { background: #f3f4f6; border-radius: 6px; padding: 8px 10px; text-align: center; }
+        .result-summary-item .val { font-size: 16px; font-weight: bold; color: #374151; }
+        .result-summary-item .lbl { font-size: 10px; color: #9ca3af; margin-top: 2px; }
+        .detail-card { background: #f9fafb; border-radius: 8px; padding: 12px; margin-bottom: 8px; border: 1px solid #e5e7eb; }
+        .detail-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .detail-card-name { font-weight: 700; font-size: 13px; color: #1f2937; }
+        .detail-card-score { font-size: 18px; font-weight: 800; color: #667eea; }
+        .detail-card-rank { font-size: 11px; background: #e0e7ff; color: #4f46e5; padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
+        .calc-process { background: white; border: 1px dashed #d1d5db; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; font-size: 11px; font-family: 'Consolas', monospace; color: #4b5563; line-height: 1.8; }
+        .calc-process .calc-label { color: #9ca3af; }
+        .calc-process .calc-val { font-weight: bold; }
+        .calc-process .calc-result { color: #667eea; font-weight: bold; font-size: 13px; }
+        .score-source-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+        .score-tag { font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 600; }
+        .score-tag.director { background: #ede9fe; color: #7c3aed; }
+        .score-tag.deputy { background: #d1fae5; color: #059669; }
+        .score-tag.staff { background: #fef3c7; color: #d97706; }
+        .score-tag.missing { background: #f3f4f6; color: #9ca3af; border: 1px dashed #d1d5db; }
+        .result-view-toggle { display: flex; gap: 4px; margin-bottom: 12px; background: #f3f4f6; border-radius: 8px; padding: 3px; }
+        .result-view-btn { padding: 6px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; background: transparent; color: #6b7280; transition: all 0.2s; }
+        .result-view-btn.active { background: white; color: #374151; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .detail-collapse { cursor: pointer; user-select: none; }
+        .detail-collapse-body { overflow: hidden; transition: max-height 0.3s ease; }
+        .detail-collapse-body.collapsed { max-height: 0 !important; }
+        @media (max-width: 768px) { .header { flex-direction: column; gap: 15px; text-align: center; } .nav-tabs { flex-wrap: wrap; justify-content: center; } .stats-grid { grid-template-columns: repeat(2, 1fr); } .eval-item { flex-direction: column; gap: 10px; align-items: flex-start; } .result-summary { grid-template-columns: repeat(2, 1fr); } }
     </style>
 </head>
 <body>
@@ -207,7 +232,7 @@
                 <h3>&#129504; 测试数据管理</h3>
                 <p style="color:#6b7280;margin-bottom:14px;font-size:12px;">一键填入或清空模拟评测数据，便于测试系统功能</p>
                 <div class="admin-panel"><div class="action-buttons"><button class="btn btn-warning btn-sm" onclick="generateTestData()">&#128221; 填入模拟数据</button><button class="btn btn-danger btn-sm" onclick="clearAllEvaluations()">&#128465; 清空所有评价</button><button class="btn btn-danger btn-sm" onclick="resetAllData()">&#128260; 重置系统</button></div></div>
-                <div class="export-section"><h4>&#128229; 导出评价数据</h4><div class="action-buttons"><button class="btn btn-primary" onclick="exportFullExcel()">&#128202; 导出全量Excel</button><button class="btn btn-secondary" onclick="exportCSV()">&#128203; 导出CSV</button></div></div>
+                <div class="export-section"><h4>&#128229; 导出评价数据</h4><div class="action-buttons"><button class="btn btn-primary" onclick="exportFullExcel()">&#128202; 导出汇总表</button><button class="btn btn-secondary" onclick="exportDetailExcel()">&#128203; 导出明细表</button></div></div>
             </div>
             <!-- 员工管理 -->
             <div id="employeesTab" class="tab-content hidden">
@@ -217,10 +242,25 @@
             </div>
             <!-- 评价结果 -->
             <div id="resultsTab" class="tab-content hidden">
-                <h3>&#127942; 最终评价得分结果表</h3>
+                <h3>&#127942; 最终评价得分结果</h3>
                 <p style="color:#6b7280;margin-bottom:10px;font-size:12px;">综合评分 = 正职领导评价(30%) + 副职领导评价(10%) + 员工互评平均(60%)</p>
-                <div style="max-height:600px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;">
-                    <table style="font-size:13px;"><thead><tr style="background:#f3f4f6;position:sticky;top:0;"><th style="padding:12px 8px;">排名</th><th style="padding:12px 8px;">姓名</th><th style="padding:12px 8px;">正职评价</th><th style="padding:12px 8px;">副职评价</th><th style="padding:12px 8px;">员工互评</th><th style="padding:12px 8px;">被评次数</th><th style="padding:12px 8px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;">综合得分</th></tr></thead><tbody id="adminResultsTable"></tbody></table>
+                <div class="result-summary" id="resultSummary"></div>
+                <div class="result-view-toggle">
+                    <button class="result-view-btn active" onclick="switchResultView('summary')">&#128202; 汇总视图</button>
+                    <button class="result-view-btn" onclick="switchResultView('detail')">&#128203; 详细视图</button>
+                </div>
+                <div id="resultSummaryView">
+                    <div style="max-height:600px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;">
+                        <table style="font-size:13px;"><thead><tr style="background:#f3f4f6;position:sticky;top:0;"><th style="padding:10px 8px;">排名</th><th style="padding:10px 8px;">姓名</th><th style="padding:10px 8px;">正职评价</th><th style="padding:10px 8px;">副职评价</th><th style="padding:10px 8px;">员工互评</th><th style="padding:10px 8px;">被评次数</th><th style="padding:10px 8px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;">综合得分</th></tr></thead><tbody id="adminResultsTable"></tbody></table>
+                    </div>
+                </div>
+                <div id="resultDetailView" class="hidden"></div>
+                <div class="export-section" style="margin-top:16px;">
+                    <h4>&#128229; 导出评价数据</h4>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="exportFullExcel()">&#128202; 导出全量Excel</button>
+                        <button class="btn btn-secondary" onclick="exportDetailExcel()">&#128203; 导出明细Excel</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -656,10 +696,17 @@
         const emp = EMPLOYEES.find(e => e.id === empId);
         if (!emp) return null;
         const ds = [], dpts = [], ss = [];
+        const allSources = []; // 记录每位评分者的详细信息
         Object.entries(systemData.evaluations).forEach(([eid, evs]) => {
             if (evs[empId] !== undefined) {
                 const ev = EMPLOYEES.find(e => e.id === eid);
-                if (ev) { if (ev.role === 'director') ds.push(evs[empId]); else if (ev.role === 'deputy') dpts.push(evs[empId]); else ss.push(evs[empId]); }
+                if (ev) {
+                    const score = evs[empId];
+                    allSources.push({ evaluatorId: eid, evaluatorName: ev.name, evaluatorRole: ev.role, score });
+                    if (ev.role === 'director') ds.push(score);
+                    else if (ev.role === 'deputy') dpts.push(score);
+                    else ss.push(score);
+                }
             }
         });
         const da = ds.length ? ds.reduce((a,b) => a+b, 0)/ds.length : 0;
@@ -669,28 +716,126 @@
         if (ds.length) { ws += da * 0.30; tw += 0.30; }
         if (dpts.length) { ws += dpa * 0.10; tw += 0.10; }
         if (ss.length) { ws += sa * 0.60; tw += 0.60; }
-        return { id: emp.id, name: emp.name, role: emp.role, directorAvg: da, deputyAvg: dpa, staffAvg: sa, finalScore: tw > 0 ? ws/tw : 0, evalCount: ds.length + dpts.length + ss.length };
+        return {
+            id: emp.id, name: emp.name, role: emp.role,
+            directorAvg: da, deputyAvg: dpa, staffAvg: sa,
+            directorScores: ds, deputyScores: dpts, staffScores: ss,
+            allSources: allSources,
+            finalScore: tw > 0 ? ws/tw : 0,
+            evalCount: ds.length + dpts.length + ss.length
+        };
+    }
+
+    let currentResultView = 'summary';
+    let cachedResults = [];
+
+    function switchResultView(view) {
+        currentResultView = view;
+        document.querySelectorAll('.result-view-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.result-view-btn[onclick*="' + view + '"]').classList.add('active');
+        document.getElementById('resultSummaryView').classList.toggle('hidden', view !== 'summary');
+        document.getElementById('resultDetailView').classList.toggle('hidden', view !== 'detail');
+        if (view === 'detail') renderDetailedResults();
     }
 
     function initAdminResults() {
-        const results = EMPLOYEES.filter(e => e.role === 'staff').map(e => calculateEmployeeScore(e.id)).filter(Boolean);
-        results.sort((a, b) => b.finalScore - a.finalScore);
-        results.forEach((r, i) => r.rank = i + 1);
+        // 计算所有员工的得分
+        cachedResults = EMPLOYEES.map(e => calculateEmployeeScore(e.id)).filter(Boolean);
+        // 排序：按综合得分降序
+        cachedResults.sort((a, b) => b.finalScore - a.finalScore);
+        cachedResults.forEach((r, i) => r.rank = i + 1);
+
+        // 汇总统计
+        const allStaff = cachedResults.filter(r => r.role === 'staff');
+        const withScore = allStaff.filter(r => r.evalCount > 0);
+        const avgScore = withScore.length ? (withScore.reduce((s,r) => s + r.finalScore, 0) / withScore.length) : 0;
+        const maxR = withScore.length ? withScore[0] : null;
+        const minR = withScore.length ? withScore[withScore.length - 1] : null;
+
+        document.getElementById('resultSummary').innerHTML =
+            '<div class="result-summary-item"><div class="val">' + EMPLOYEES.length + '</div><div class="lbl">全员人数</div></div>' +
+            '<div class="result-summary-item"><div class="val">' + allStaff.length + '</div><div class="lbl">参评员工</div></div>' +
+            '<div class="result-summary-item"><div class="val">' + withScore.length + '</div><div class="lbl">已有评分</div></div>' +
+            '<div class="result-summary-item"><div class="val">' + avgScore.toFixed(1) + '</div><div class="lbl">平均得分</div></div>' +
+            '<div class="result-summary-item"><div class="val">' + (maxR ? maxR.finalScore.toFixed(1) : '-') + '</div><div class="lbl">最高分(' + (maxR ? maxR.name : '') + ')</div></div>' +
+            '<div class="result-summary-item"><div class="val">' + (minR ? minR.finalScore.toFixed(1) : '-') + '</div><div class="lbl">最低分(' + (minR ? minR.name : '') + ')</div></div>';
+
+        // 汇总表
         const table = document.getElementById('adminResultsTable');
-        if (!results.length || results.every(r => r.evalCount === 0)) {
-            table.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:#9ca3af;">暂无评价数据</td></tr>'; return;
+        if (!cachedResults.length || cachedResults.every(r => r.evalCount === 0)) {
+            table.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:#9ca3af;">暂无评价数据</td></tr>';
+            document.getElementById('resultDetailView').innerHTML = '<div style="text-align:center;padding:30px;color:#9ca3af;">暂无评价数据</div>';
+            return;
         }
         const rc = ['#f59e0b','#6b7280','#92400e'];
-        table.innerHTML = results.map((r, i) => {
+        table.innerHTML = cachedResults.map((r, i) => {
+            const roleTag = r.role === 'deputy' ? ' <span style="color:#f59e0b;font-size:10px;">[副职]</span>' : '';
             const bg = i === 0 ? 'background:#fef9c3;' : i === 1 ? 'background:#f9fafb;' : i === 2 ? 'background:#fdf2f8;' : '';
             return '<tr style="border-bottom:1px solid #e5e7eb;' + bg + '">' +
-                '<td style="padding:10px 8px;text-align:center;"><span style="background:' + (rc[i]||'#9ca3af') + ';color:white;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:bold;">' + r.rank + '</span></td>' +
-                '<td style="padding:10px 8px;font-weight:600;">' + r.name + '</td>' +
+                '<td style="padding:10px 8px;text-align:center;"><span style="background:' + (rc[i]||'#9ca3af') + ';color:white;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:bold;">' + r.rank + '</span></td>' +
+                '<td style="padding:10px 8px;font-weight:600;">' + r.name + roleTag + '</td>' +
                 '<td style="padding:10px 8px;text-align:center;color:#4f46e5;">' + (r.directorAvg > 0 ? r.directorAvg.toFixed(1) : '<span style="color:#ccc">-</span>') + '</td>' +
                 '<td style="padding:10px 8px;text-align:center;color:#10b981;">' + (r.deputyAvg > 0 ? r.deputyAvg.toFixed(1) : '<span style="color:#ccc">-</span>') + '</td>' +
                 '<td style="padding:10px 8px;text-align:center;color:#f59e0b;">' + (r.staffAvg > 0 ? r.staffAvg.toFixed(1) : '<span style="color:#ccc">-</span>') + '</td>' +
                 '<td style="padding:10px 8px;text-align:center;color:#6b7280;">' + r.evalCount + '</td>' +
-                '<td style="padding:10px 8px;text-align:center;font-weight:bold;font-size:17px;color:#667eea;">' + (r.finalScore > 0 ? r.finalScore.toFixed(2) : '-') + '</td></tr>';
+                '<td style="padding:10px 8px;text-align:center;font-weight:bold;font-size:16px;color:#667eea;">' + (r.finalScore > 0 ? r.finalScore.toFixed(2) : '-') + '</td></tr>';
+        }).join('');
+
+        // 如果当前在详细视图，也要刷新
+        if (currentResultView === 'detail') renderDetailedResults();
+    }
+
+    function renderDetailedResults() {
+        const container = document.getElementById('resultDetailView');
+        if (!cachedResults.length) { container.innerHTML = '<div style="text-align:center;padding:30px;color:#9ca3af;">暂无评价数据</div>'; return; }
+
+        container.innerHTML = cachedResults.map(r => {
+            if (r.evalCount === 0) return '<div class="detail-card" style="opacity:0.5;"><div class="detail-card-header"><span class="detail-card-name">' + r.name + (r.role === 'deputy' ? ' <span style="color:#f59e0b;font-size:10px;">[副职]</span>' : '') + '</span><span class="detail-card-rank">第' + r.rank + '名</span></div><div style="color:#9ca3af;font-size:11px;">暂无评价数据</div></div>';
+
+            // 计算过程
+            let calcLines = [];
+            if (r.directorAvg > 0) calcLines.push('<span class="calc-label">正职评价均值:</span> <span class="calc-val">' + r.directorAvg.toFixed(1) + '</span> × 30% = <span class="calc-val">' + (r.directorAvg * 0.3).toFixed(2) + '</span>');
+            else calcLines.push('<span class="calc-label">正职评价:</span> <span style="color:#ccc">未评</span>');
+            if (r.deputyAvg > 0) calcLines.push('<span class="calc-label">副职评价均值:</span> <span class="calc-val">' + r.deputyAvg.toFixed(1) + '</span> × 10% = <span class="calc-val">' + (r.deputyAvg * 0.1).toFixed(2) + '</span>');
+            else calcLines.push('<span class="calc-label">副职评价:</span> <span style="color:#ccc">未评</span>');
+            if (r.staffAvg > 0) calcLines.push('<span class="calc-label">员工互评均值:</span> <span class="calc-val">' + r.staffAvg.toFixed(1) + '</span> (' + r.staffScores.length + '人) × 60% = <span class="calc-val">' + (r.staffAvg * 0.6).toFixed(2) + '</span>');
+            else calcLines.push('<span class="calc-label">员工互评:</span> <span style="color:#ccc">无</span>');
+            calcLines.push('<span class="calc-result">▶ 综合得分: ' + r.finalScore.toFixed(2) + '</span>');
+
+            // 评分来源标签
+            const sourceTags = r.allSources.map(s => {
+                const roleLabel = s.evaluatorRole === 'director' ? '正职' : s.evaluatorRole === 'deputy' ? '副职' : '';
+                const cls = s.evaluatorRole === 'director' ? 'director' : s.evaluatorRole === 'deputy' ? 'deputy' : 'staff';
+                return '<span class="score-tag ' + cls + '">' + (roleLabel ? roleLabel + ' ' : '') + s.evaluatorName + ': ' + s.score + '</span>';
+            }).join('');
+
+            // 找出未评分的人
+            const missingEvaluators = [];
+            EMPLOYEES.forEach(ev => {
+                if (ev.id === r.id) return;
+                if (ev.role === 'director' || ev.role === 'deputy') {
+                    // 领导需要给staff评分
+                    if (r.role === 'staff' && !r.allSources.some(s => s.evaluatorId === ev.id)) {
+                        missingEvaluators.push({ name: ev.name, role: ev.role });
+                    }
+                } else {
+                    // 员工互评不评自己
+                    if (!r.allSources.some(s => s.evaluatorId === ev.id)) {
+                        missingEvaluators.push({ name: ev.name, role: ev.role });
+                    }
+                }
+            });
+            const missingTags = missingEvaluators.map(m => '<span class="score-tag missing">' + m.name + ': 未评</span>').join('');
+
+            return '<div class="detail-card">' +
+                '<div class="detail-card-header">' +
+                    '<span><span class="detail-card-name">' + r.name + (r.role === 'deputy' ? ' <span style="color:#f59e0b;font-size:10px;">[副职]</span>' : '') + '</span><span class="detail-card-rank">第' + r.rank + '名</span></span>' +
+                    '<span class="detail-card-score">' + r.finalScore.toFixed(2) + '</span>' +
+                '</div>' +
+                '<div class="calc-process">' + calcLines.join('<br>') + '</div>' +
+                '<div style="font-size:11px;color:#6b7280;margin-bottom:4px;">&#128172; 评分来源（' + r.evalCount + '人已评）</div>' +
+                '<div class="score-source-list">' + sourceTags + missingTags + '</div>' +
+            '</div>';
         }).join('');
     }
 
@@ -698,14 +843,43 @@
     // 导出
     // ==========================================
     function exportFullExcel() {
-        const results = EMPLOYEES.filter(e => e.role === 'staff').map(e => calculateEmployeeScore(e.id)).filter(Boolean);
-        results.sort((a, b) => b.finalScore - a.finalScore);
-        results.forEach((r, i) => r.rank = i + 1);
-        let csv = '\uFEFF排名,姓名,正职领导评价(30%),副职领导评价(10%),员工互评平均(60%),综合得分,被评次数\n';
-        results.forEach(r => { csv += r.rank + ',' + r.name + ',' + (r.directorAvg > 0 ? r.directorAvg.toFixed(1) : '') + ',' + (r.deputyAvg > 0 ? r.deputyAvg.toFixed(1) : '') + ',' + (r.staffAvg > 0 ? r.staffAvg.toFixed(1) : '') + ',' + r.finalScore.toFixed(2) + ',' + r.evalCount + '\n'; });
-        downloadFile(csv, '部门互评结果_' + new Date().toLocaleDateString('zh-CN').replace(/\//g, '-') + '.csv', 'text/csv;charset=utf-8');
-        showToast('Excel 已导出', 'success');
+        // 汇总表：包含所有员工
+        let csv = '\uFEFF排名,姓名,角色,正职领导评价(30%),副职领导评价(10%),员工互评平均(60%),综合得分,被评次数\n';
+        cachedResults.forEach(r => {
+            const roleLabel = r.role === 'director' ? '正职领导' : r.role === 'deputy' ? '副职领导' : '普通员工';
+            csv += r.rank + ',' + r.name + ',' + roleLabel + ',' +
+                (r.directorAvg > 0 ? r.directorAvg.toFixed(1) : '') + ',' +
+                (r.deputyAvg > 0 ? r.deputyAvg.toFixed(1) : '') + ',' +
+                (r.staffAvg > 0 ? r.staffAvg.toFixed(1) : '') + ',' +
+                (r.finalScore > 0 ? r.finalScore.toFixed(2) : '') + ',' + r.evalCount + '\n';
+        });
+        downloadFile(csv, '部门互评汇总_' + new Date().toLocaleDateString('zh-CN').replace(/\//g, '-') + '.csv', 'text/csv;charset=utf-8');
+        showToast('汇总表已导出', 'success');
     }
+
+    function exportDetailExcel() {
+        // 明细表：包含每位员工的完整评分来源和计算过程
+        let csv = '\uFEFF排名,姓名,角色,正职评价分,正职×30%,副职评价分,副职×10%,员工互评人数,互评均分,互评×60%,综合得分,被评次数,各评分者详情\n';
+        cachedResults.forEach(r => {
+            const roleLabel = r.role === 'director' ? '正职领导' : r.role === 'deputy' ? '副职领导' : '普通员工';
+            const d30 = r.directorAvg > 0 ? (r.directorAvg * 0.3).toFixed(2) : '';
+            const dp10 = r.deputyAvg > 0 ? (r.deputyAvg * 0.1).toFixed(2) : '';
+            const s60 = r.staffAvg > 0 ? (r.staffAvg * 0.6).toFixed(2) : '';
+            const details = r.allSources.map(s => {
+                const rl = s.evaluatorRole === 'director' ? '[正职]' : s.evaluatorRole === 'deputy' ? '[副职]' : '[员工]';
+                return rl + s.evaluatorName + ':' + s.score + '分';
+            }).join('; ');
+            csv += r.rank + ',' + r.name + ',' + roleLabel + ',' +
+                (r.directorAvg > 0 ? r.directorAvg.toFixed(1) : '') + ',' + d30 + ',' +
+                (r.deputyAvg > 0 ? r.deputyAvg.toFixed(1) : '') + ',' + dp10 + ',' +
+                r.staffScores.length + ',' +
+                (r.staffAvg > 0 ? r.staffAvg.toFixed(1) : '') + ',' + s60 + ',' +
+                (r.finalScore > 0 ? r.finalScore.toFixed(2) : '') + ',' + r.evalCount + ',"' + details + '"\n';
+        });
+        downloadFile(csv, '部门互评明细_' + new Date().toLocaleDateString('zh-CN').replace(/\//g, '-') + '.csv', 'text/csv;charset=utf-8');
+        showToast('明细表已导出', 'success');
+    }
+
     function exportCSV() { exportFullExcel(); }
     function downloadFile(content, filename, type) {
         const blob = new Blob([content], { type });
