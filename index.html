@@ -148,9 +148,14 @@
 
     const SCORE_RULES = { HIGH_MAX: 4, LOW_MIN: 2 };
     const STATE_KEY = 'evaluation_v2_data';
+    const JSONBIN_ID = '69e9cde0856a68218963330c';
+    const JSONBIN_API_KEY = '$2a$10$3x6ustM943wc8LFtNcb/I.L.acCynFMMqwi627g4miJe3ssd7mh0a';
+    const JSONBIN_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_ID + '/latest';
+    const JSONBIN_UPDATE_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_ID;
     let EMPLOYEES = [];
     let currentUser = null;
     let systemData = null;
+    let saveTimer = null; // 防抖计时器
 
     function init() {
         loadEmployees(); loadState();
@@ -177,8 +182,44 @@
     function loadState() {
         const saved = localStorage.getItem(STATE_KEY);
         systemData = saved ? JSON.parse(saved) : { evaluations: {}, lastUpdated: new Date().toISOString() };
+        // 异步从云端拉取最新数据
+        fetchJSONBin();
     }
-    function saveState() { systemData.lastUpdated = new Date().toISOString(); localStorage.setItem(STATE_KEY, JSON.stringify(systemData)); }
+    async function fetchJSONBin() {
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            if (JSONBIN_API_KEY) headers['X-Master-Key'] = JSONBIN_API_KEY;
+            const res = await fetch(JSONBIN_URL, { headers });
+            if (!res.ok) return;
+            const json = await res.json();
+            if (json.record && json.record.evaluations) {
+                const cloudData = json.record;
+                // 云端数据比本地新才覆盖
+                if (!systemData.lastUpdated || cloudData.lastUpdated > systemData.lastUpdated) {
+                    systemData = cloudData;
+                    localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
+                    if (currentUser) initEvaluationPage(); // 刷新页面展示
+                }
+            }
+        } catch (e) { /* 网络失败静默，用本地数据 */ }
+    }
+    function saveState() {
+        systemData.lastUpdated = new Date().toISOString();
+        localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
+        // 防抖：1秒内只上传一次
+        if (saveTimer) clearTimeout(saveTimer);
+        saveTimer = setTimeout(pushToJSONBin, 1000);
+    }
+    async function pushToJSONBin() {
+        if (!JSONBIN_API_KEY) return; // 没有API Key则不上传
+        try {
+            await fetch(JSONBIN_UPDATE_URL, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY },
+                body: JSON.stringify(systemData)
+            });
+        } catch (e) { /* 上传失败静默 */ }
+    }
 
     function showLoginInterface() {
         document.getElementById('loginPage').classList.remove('hidden');

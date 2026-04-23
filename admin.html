@@ -195,7 +195,7 @@
                 </div>
                 <h4 style="margin:14px 0 10px;font-size:13px;">&#128203; 详细进度</h4>
                 <div id="progressList"></div>
-                <div class="action-buttons" style="margin-top:14px;"><button class="btn btn-secondary btn-sm" onclick="initStatusPage()">&#128260; 刷新进度</button></div>
+                <div class="action-buttons" style="margin-top:14px;"><button class="btn btn-secondary btn-sm" onclick="async function(){if(await forceSyncFromCloud())initStatusPage();}">&#128260; 刷新进度</button></div>
             </div>
             <!-- 领导评分 -->
             <div id="evaluateTab" class="tab-content hidden">
@@ -248,6 +248,7 @@
                 <div class="result-view-toggle">
                     <button class="result-view-btn active" onclick="switchResultView('summary')">&#128202; 汇总视图</button>
                     <button class="result-view-btn" onclick="switchResultView('detail')">&#128203; 详细视图</button>
+                    <button class="result-view-btn" onclick="async function(){if(await forceSyncFromCloud())initAdminResults();}">&#128260; 刷新云端</button>
                 </div>
                 <div id="resultSummaryView">
                     <div style="max-height:600px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;">
@@ -291,6 +292,12 @@
     const ADMIN_NAME = '杨洪均';
     const ADMIN_PASSWORD_KEY = 'eval_admin_pwd_v2';
 
+    // JSONBin 云端同步配置
+    const JSONBIN_ID = '69e9cde0856a68218963330c';
+    const JSONBIN_API_KEY = '$2a$10$3x6ustM943wc8LFtNcb/I.L.acCynFMMqwi627g4miJe3ssd7mh0a';
+    const JSONBIN_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_ID + '/latest';
+    const JSONBIN_UPDATE_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_ID;
+
     const DEFAULT_EMPLOYEES = [
         { id: '1', name: '杨洪均', role: 'director', phone: '13388110096', email: '13388110096@189.cn' },
         { id: '2', name: '钟洪明', role: 'deputy', phone: '13320882361', email: 'myzhonghongming.sc@chinatelecom.cn' },
@@ -311,6 +318,7 @@
 
     let EMPLOYEES = [];
     let systemData = null;
+    let saveTimer = null; // 防抖计时器
     const STATE_KEY = 'evaluation_v2_data';
 
     const EMAILJS_SERVICE_ID = 'service_shykidyang';
@@ -354,8 +362,57 @@
     function loadState() {
         const saved = localStorage.getItem(STATE_KEY);
         systemData = saved ? JSON.parse(saved) : { evaluations: {}, lastUpdated: new Date().toISOString() };
+        fetchJSONBin();
     }
-    function saveState() { systemData.lastUpdated = new Date().toISOString(); localStorage.setItem(STATE_KEY, JSON.stringify(systemData)); }
+    async function fetchJSONBin() {
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            if (JSONBIN_API_KEY) headers['X-Master-Key'] = JSONBIN_API_KEY;
+            const res = await fetch(JSONBIN_URL, { headers });
+            if (!res.ok) return;
+            const json = await res.json();
+            if (json.record && json.record.evaluations) {
+                const cloudData = json.record;
+                if (!systemData.lastUpdated || cloudData.lastUpdated > systemData.lastUpdated) {
+                    systemData = cloudData;
+                    localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
+                }
+            }
+        } catch (e) { /* 网络失败静默 */ }
+    }
+    function saveState() {
+        systemData.lastUpdated = new Date().toISOString();
+        localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
+        if (saveTimer) clearTimeout(saveTimer);
+        saveTimer = setTimeout(pushToJSONBin, 1000);
+    }
+    async function pushToJSONBin() {
+        if (!JSONBIN_API_KEY) return;
+        try {
+            await fetch(JSONBIN_UPDATE_URL, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY },
+                body: JSON.stringify(systemData)
+            });
+        } catch (e) { /* 上传失败静默 */ }
+    }
+    // 强制从云端刷新（覆盖本地）
+    async function forceSyncFromCloud() {
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            if (JSONBIN_API_KEY) headers['X-Master-Key'] = JSONBIN_API_KEY;
+            const res = await fetch(JSONBIN_URL, { headers });
+            if (!res.ok) { showToast('云端同步失败', 'error'); return false; }
+            const json = await res.json();
+            if (json.record && json.record.evaluations) {
+                systemData = json.record;
+                localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
+                showToast('已从云端同步最新数据', 'success');
+                return true;
+            }
+        } catch (e) { showToast('网络错误: ' + e.message, 'error'); }
+        return false;
+    }
 
     // ==========================================
     // 登录
@@ -424,18 +481,18 @@
         initStatusPage();
     }
 
-    function switchTab(tabName) {
+    async function switchTab(tabName) {
         document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
         document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
         const el = document.getElementById(tabName + 'Tab');
         if (el) el.classList.remove('hidden');
         const btn = document.querySelector('.nav-tab[data-tab="' + tabName + '"]');
         if (btn) btn.classList.add('active');
-        if (tabName === 'status') initStatusPage();
-        else if (tabName === 'evaluate') initAdminEvaluate();
+        if (tabName === 'status') { await forceSyncFromCloud(); initStatusPage(); }
+        else if (tabName === 'evaluate') { await forceSyncFromCloud(); initAdminEvaluate(); }
         else if (tabName === 'sendlink') initSendLinkList();
         else if (tabName === 'employees') initEmployeesTable();
-        else if (tabName === 'results') initAdminResults();
+        else if (tabName === 'results') { await forceSyncFromCloud(); initAdminResults(); }
     }
 
     // ==========================================
