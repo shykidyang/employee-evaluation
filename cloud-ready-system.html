@@ -459,54 +459,8 @@
             <div class="card">
                 <h1>📊 部门内部互评系统</h1>
                 <p class="subtitle">v2.1 · 安全评测平台</p>
-                <div style="text-align:right; margin-bottom: 10px;" id="clearCacheBtn">
-                    <button onclick="clearLoginCache()" style="font-size:11px; color:#9ca3af; background:none; border:none; cursor:pointer; text-decoration:underline;">🔄 清除缓存重新登录</button>
-                </div>
                 
-                <!-- 管理员邮箱登录 -->
-                <div id="adminLoginSection">
-                    <h3 style="margin-bottom: 15px; color: #ef4444;">🔐 管理员登录</h3>
-                    <div class="form-group">
-                        <label for="adminEmail">管理员邮箱</label>
-                        <input type="email" id="adminEmail" class="form-control" placeholder="输入管理员邮箱" value="13388110096@189.cn">
-                    </div>
-                    <button class="btn btn-primary" onclick="sendAdminCode()">📧 发送验证码</button>
-                </div>
-                
-                <!-- 验证码输入 -->
-                <div id="verifySection" class="hidden">
-                    <div class="alert alert-success">
-                        ✅ 验证码已发送至您的邮箱
-                    </div>
-                    <div class="code-display" id="codeDisplay">------</div>
-                    <p style="text-align: center; color: #6b7280; margin-bottom: 20px;">
-                        ⏰ 验证码 <span id="countdown">5:00</span> 后过期
-                    </p>
-                    
-                    <div class="form-group">
-                        <label for="verifyCode">输入6位验证码</label>
-                        <input type="text" id="verifyCode" class="form-control" maxlength="6" placeholder="输入验证码">
-                    </div>
-                    <button class="btn btn-success" onclick="verifyAdminCode()">🔓 登录</button>
-                    <button class="btn btn-secondary" onclick="backToAdminLogin()" style="margin-top: 10px;">← 返回</button>
-                </div>
-                
-                <!-- 登录链接登录（非管理员） -->
-                <div id="linkLoginSection" class="hidden">
-                    <div class="link-login-notice">
-                        <h4 style="color: #1e40af; margin-bottom: 10px;">📧 员工登录</h4>
-                        <p style="color: #1e40af; font-size: 13px; margin-bottom: 15px;">
-                            请输入管理员发送的登录链接验证码
-                        </p>
-                        <div class="form-group">
-                            <label for="linkCode">链接验证码</label>
-                            <input type="text" id="linkCode" class="form-control" maxlength="6" placeholder="输入6位验证码">
-                        </div>
-                        <button class="btn btn-primary" onclick="verifyLinkCode()">🔓 验证登录</button>
-                    </div>
-                </div>
-                
-                <!-- 退出后提示（不暴露管理员入口） -->
+                <!-- 退出后提示 -->
                 <div id="logoutNotice" class="hidden" style="text-align: center; padding: 30px 0;">
                     <div style="font-size: 48px; margin-bottom: 15px;">👋</div>
                     <h3 style="color: #374151; margin-bottom: 10px;">已安全退出</h3>
@@ -516,7 +470,6 @@
                 <!-- 错误提示 -->
                 <div id="loginError" class="hidden">
                     <div class="alert alert-error" id="errorMessage"></div>
-                    <button class="btn btn-secondary" onclick="backToAdminLogin()">← 重新登录</button>
                 </div>
             </div>
         </div>
@@ -651,7 +604,7 @@
                 <div class="admin-panel">
                     <h4>📧 发送登录链接</h4>
                     <p style="color: #78350f; margin-bottom: 15px; font-size: 13px;">
-                        勾选需要发送登录链接的员工，系统将生成包含验证码的登录链接
+                        勾选需要发送登录链接的人员，系统将通过邮件发送登录链接
                     </p>
                     
                     <div style="max-height: 300px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 15px;">
@@ -853,8 +806,7 @@
         const STATE_KEY = 'evaluation_v2_data';
         let currentUser = null;
         let systemData = null;
-        let countdownTimer = null;
-        let currentCode = null;
+
         
         // ==========================================
         // 初始化
@@ -923,12 +875,8 @@
         function showLoginInterface() {
             document.getElementById('loginPage').classList.remove('hidden');
             document.getElementById('mainPage').classList.add('hidden');
-            document.getElementById('adminLoginSection').classList.remove('hidden');
-            document.getElementById('verifySection').classList.add('hidden');
-            document.getElementById('linkLoginSection').classList.add('hidden');
             document.getElementById('loginError').classList.add('hidden');
             document.getElementById('logoutNotice').classList.add('hidden');
-            document.getElementById('clearCacheBtn').style.display = 'block';
         }
         
         function showMainInterface() {
@@ -956,76 +904,6 @@
             initEvaluationPage();
             initProgressPage();
             initAdminPage();
-        }
-        
-        // 管理员发送验证码
-        function sendAdminCode() {
-            const email = document.getElementById('adminEmail').value.trim();
-            
-            if (!email) {
-                showLoginError('请输入管理员邮箱');
-                return;
-            }
-            
-            // 必须是管理员邮箱
-            if (email !== ADMIN_EMAIL) {
-                showLoginError('您不是系统管理员，请使用管理员账号登录');
-                return;
-            }
-            
-            // 生成验证码
-            currentCode = String(Math.floor(100000 + Math.random() * 900000));
-            
-            // 显示验证码
-            document.getElementById('adminLoginSection').classList.add('hidden');
-            document.getElementById('verifySection').classList.remove('hidden');
-            document.getElementById('codeDisplay').textContent = currentCode;
-            
-            // 启动倒计时
-            startCountdown();
-        }
-        
-        function startCountdown() {
-            if (countdownTimer) clearInterval(countdownTimer);
-            let timeLeft = 300;
-            countdownTimer = setInterval(() => {
-                timeLeft--;
-                const mins = Math.floor(timeLeft / 60);
-                const secs = timeLeft % 60;
-                document.getElementById('countdown').textContent = 
-                    `${mins}:${secs.toString().padStart(2, '0')}`;
-                
-                if (timeLeft <= 0) {
-                    clearInterval(countdownTimer);
-                    showLoginError('验证码已过期，请重新获取');
-                }
-            }, 1000);
-        }
-        
-        function verifyAdminCode() {
-            const code = document.getElementById('verifyCode').value.trim();
-            
-            if (!code) {
-                showLoginError('请输入验证码');
-                return;
-            }
-            
-            if (code === currentCode) {
-                // 管理员登录成功 - 强制设置角色为director
-                const admin = EMPLOYEES.find(e => e.email === ADMIN_EMAIL);
-                currentUser = {
-                    id: admin.id,
-                    name: admin.name,
-                    role: 'director',  // 强制设置为director
-                    email: admin.email
-                };
-                localStorage.setItem('current_user_v2', JSON.stringify(currentUser));
-                
-                if (countdownTimer) clearInterval(countdownTimer);
-                showMainInterface();
-            } else {
-                showLoginError('验证码错误，请检查后重试');
-            }
         }
         
         // 登录链接方式：解析 URL 中的加密身份信息（纯前端，无需服务器）
@@ -1068,25 +946,7 @@
             }
         }
         
-        function verifyLinkCode() {
-            const code = document.getElementById('linkCode').value.trim();
-            if (code) {
-                handleLinkLogin(code);
-            }
-        }
-        
-        function backToAdminLogin() {
-            if (countdownTimer) clearInterval(countdownTimer);
-            document.getElementById('adminLoginSection').classList.remove('hidden');
-            document.getElementById('verifySection').classList.add('hidden');
-            document.getElementById('linkLoginSection').classList.add('hidden');
-            document.getElementById('loginError').classList.add('hidden');
-        }
-        
         function showLoginError(msg) {
-            document.getElementById('adminLoginSection').classList.add('hidden');
-            document.getElementById('verifySection').classList.add('hidden');
-            document.getElementById('linkLoginSection').classList.add('hidden');
             document.getElementById('loginError').classList.remove('hidden');
             document.getElementById('errorMessage').innerHTML = '❌ ' + msg;
         }
@@ -1103,19 +963,9 @@
         function showLogoutPage() {
             document.getElementById('loginPage').classList.remove('hidden');
             document.getElementById('mainPage').classList.add('hidden');
-            document.getElementById('adminLoginSection').classList.add('hidden');
-            document.getElementById('verifySection').classList.add('hidden');
-            document.getElementById('linkLoginSection').classList.add('hidden');
             document.getElementById('loginError').classList.add('hidden');
             document.getElementById('logoutNotice').classList.remove('hidden');
-            document.getElementById('clearCacheBtn').style.display = 'none';
         }
-        
-        // 清除登录缓存（解决缓存导致角色错误的问题）
-        function clearLoginCache() {
-            localStorage.removeItem('current_user_v2');
-            currentUser = null;
-            // 重新加载员工数据（使用最新DEFAULT）
             localStorage.removeItem('employees_v2_data');
             loadEmployees();
             showLoginInterface();
@@ -1455,23 +1305,25 @@
         function initSendLinkList() {
             const list = document.getElementById('sendLinkList');
             
-            // 只显示员工（不包括领导）
-            const staff = EMPLOYEES.filter(e => e.role === 'staff');
-            
-            list.innerHTML = staff.map(emp => `
+            // 显示所有人（管理员 + 员工），管理员标记为红色标签
+            list.innerHTML = EMPLOYEES.map(emp => {
+                const roleTag = emp.role === 'director' ? '<span style="color:#ef4444;font-size:11px;font-weight:bold;margin-left:6px;">[管理员]</span>' :
+                               emp.role === 'deputy' ? '<span style="color:#f59e0b;font-size:11px;font-weight:bold;margin-left:6px;">[副职]</span>' : '';
+                return `
                 <div class="checkbox-item">
                     <input type="checkbox" id="link_${emp.id}" value="${emp.id}">
                     <div class="checkbox-label">
-                        <strong>${emp.name}</strong>
+                        <strong>${emp.name}</strong>${roleTag}
                         <span style="color: #6b7280; font-size: 12px; margin-left: 10px;">${emp.email}</span>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
         
         function selectAllEmployees() {
-            EMPLOYEES.filter(e => e.role === 'staff').forEach(emp => {
-                document.getElementById(`link_${emp.id}`).checked = true;
+            EMPLOYEES.forEach(emp => {
+                const cb = document.getElementById('link_' + emp.id);
+                if (cb) cb.checked = true;
             });
         }
         
@@ -1520,7 +1372,7 @@
             try {
             console.log('sendLoginLinks 被调用, EMPLOYEES 数量:', EMPLOYEES.length);
             const selected = [];
-            EMPLOYEES.filter(e => e.role === 'staff').forEach(emp => {
+            EMPLOYEES.forEach(emp => {
                 const cb = document.getElementById('link_' + emp.id);
                 console.log('员工:', emp.name, 'id:', emp.id, 'checkbox:', cb ? 'found' : 'NOT FOUND', cb ? 'checked:' + cb.checked : '');
                 if (cb && cb.checked) {
