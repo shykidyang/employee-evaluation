@@ -175,8 +175,19 @@
 
     function loadEmployees() {
         const saved = localStorage.getItem('employees_v2_data');
-        EMPLOYEES = saved ? JSON.parse(saved) : [...DEFAULT_EMPLOYEES];
-        if (!saved) localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
+        // 版本检查：如果本地缓存的员工数量或格式与默认不一致，重置为默认
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed.length === DEFAULT_EMPLOYEES.length && parsed[0] && parsed[0].email && !parsed[0].phone) {
+                EMPLOYEES = parsed;
+            } else {
+                EMPLOYEES = [...DEFAULT_EMPLOYEES];
+                localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
+            }
+        } else {
+            EMPLOYEES = [...DEFAULT_EMPLOYEES];
+            localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
+        }
     }
     function loadState() {
         const saved = localStorage.getItem(STATE_KEY);
@@ -201,11 +212,8 @@
                         systemData = cloudData;
                         localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
                     }
-                    // 云端 employees 存在时覆盖本地（员工端以云端为准）
-                    if (cloudData.employees && cloudData.employees.length > 0) {
-                        EMPLOYEES = cloudData.employees;
-                        localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
-                    }
+                    // 员工列表始终以本地 DEFAULT_EMPLOYEES 为准，不用云端覆盖
+                    // （避免云端旧数据格式不匹配导致员工列表异常）
                 }
                 return; // 成功则退出
             } catch (e) {
