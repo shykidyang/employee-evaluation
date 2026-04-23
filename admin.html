@@ -241,8 +241,8 @@
             <!-- 员工管理 -->
             <div id="employeesTab" class="tab-content hidden">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;"><h3 style="margin:0;">&#128101; 员工管理</h3><button class="btn btn-primary btn-sm" onclick="showAddEmployeeModal()">&#10133; 添加员工</button></div>
-                <p style="color:#6b7280;margin-bottom:10px;font-size:12px;">共 <span id="empCount">0</span> 名员工（点击姓名/电话可编辑）</p>
-                <div style="max-height:500px;overflow-y:auto;"><table><thead><tr><th style="width:50px;">序号</th><th>姓名</th><th>电话</th><th>邮箱</th><th style="width:80px;">操作</th></tr></thead><tbody id="employeesTable"></tbody></table></div>
+                <p style="color:#6b7280;margin-bottom:10px;font-size:12px;">共 <span id="empCount">0</span> 名员工（点击姓名/邮箱可编辑）</p>
+                <div style="max-height:500px;overflow-y:auto;"><table><thead><tr><th style="width:50px;">序号</th><th>姓名</th><th>邮箱</th><th style="width:80px;">操作</th></tr></thead><tbody id="employeesTable"></tbody></table></div>
             </div>
             <!-- 评价结果 -->
             <div id="resultsTab" class="tab-content hidden">
@@ -275,7 +275,6 @@
         <div class="modal-content">
             <div class="modal-header"><h3>&#128100; 添加新员工</h3><button class="modal-close" onclick="closeAddEmployeeModal()">&times;</button></div>
             <div class="form-group"><label>姓名 *</label><input type="text" id="newEmpName" class="form-control" placeholder="请输入员工姓名"></div>
-            <div class="form-group"><label>手机号 *</label><input type="tel" id="newEmpPhone" class="form-control" placeholder="请输入11位手机号"></div>
             <div class="form-group"><label>邮箱 *</label><input type="email" id="newEmpEmail" class="form-control" placeholder="请输入邮箱地址"></div>
             <div class="form-group"><label>角色</label><select id="newEmpRole" class="form-control"><option value="staff">普通员工</option><option value="deputy">副职领导</option></select></div>
             <div class="action-buttons"><button class="btn btn-success" onclick="saveNewEmployee()" style="flex:1;">&#128190; 保存</button><button class="btn btn-secondary" onclick="closeAddEmployeeModal()" style="flex:1;">取消</button></div>
@@ -303,20 +302,20 @@
     const JSONBIN_UPDATE_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_ID;
 
     const DEFAULT_EMPLOYEES = [
-        { id: '1', name: '杨洪均', role: 'director', phone: '13388110096', email: '13388110096@189.cn' },
-        { id: '2', name: '钟洪明', role: 'deputy', phone: '13320882361', email: 'myzhonghongming.sc@chinatelecom.cn' },
-        { id: '3', name: '陈刚', role: 'staff', phone: '13388110507', email: 'mychengang2.sc@chinatelecom.cn' },
-        { id: '4', name: '陈鑫瑜', role: 'staff', phone: '13388115152', email: 'chenxy54@chinatelecom.cn' },
-        { id: '5', name: '张跃', role: 'staff', phone: '15308333709', email: 'myzhangyue.sc@chinatelecom.cn' },
-        { id: '6', name: '梁峻', role: 'staff', phone: '13388110452', email: 'myliangjun.sc@chinatelecom.cn' },
-        { id: '7', name: '未小军', role: 'staff', phone: '13388110505', email: 'myweixiaojun.sc@chinatelecom.cn' },
-        { id: '8', name: '周密', role: 'staff', phone: '13388110534', email: 'myzhoumi.sc@chinatelecom.cn' },
-        { id: '9', name: '王涛', role: 'staff', phone: '13388111868', email: 'my_wangtao.sc@chinatelecom.cn' },
-        { id: '10', name: '刘海', role: 'staff', phone: '13320882424', email: 'myliuhai.sc@chinatelecom.cn' },
-        { id: '11', name: '吴波', role: 'staff', phone: '13388110528', email: 'mywubo.sc@chinatelecom.cn' },
-        { id: '12', name: '高竹英', role: 'staff', phone: '13388111635', email: 'mygaozhuying.sc@chinatelecom.cn' },
-        { id: '13', name: '杜小东', role: 'staff', phone: '13388113150', email: 'myduxiaodong.sc@chinatelecom.cn' },
-        { id: '14', name: '张艺林', role: 'staff', phone: '13388113568', email: 'zhangyl51@chinatelecom.cn' }
+        { id: '1', name: '杨洪均', role: 'director', email: '13388110096@189.cn' },
+        { id: '2', name: '钟洪明', role: 'deputy', email: 'myzhonghongming.sc@chinatelecom.cn' },
+        { id: '3', name: '陈刚', role: 'staff', email: 'mychengang2.sc@chinatelecom.cn' },
+        { id: '4', name: '陈鑫瑜', role: 'staff', email: 'chenxy54@chinatelecom.cn' },
+        { id: '5', name: '张跃', role: 'staff', email: 'myzhangyue.sc@chinatelecom.cn' },
+        { id: '6', name: '梁峻', role: 'staff', email: 'myliangjun.sc@chinatelecom.cn' },
+        { id: '7', name: '未小军', role: 'staff', email: 'myweixiaojun.sc@chinatelecom.cn' },
+        { id: '8', name: '周密', role: 'staff', email: 'myzhoumi.sc@chinatelecom.cn' },
+        { id: '9', name: '王涛', role: 'staff', email: 'my_wangtao.sc@chinatelecom.cn' },
+        { id: '10', name: '刘海', role: 'staff', email: 'myliuhai.sc@chinatelecom.cn' },
+        { id: '11', name: '吴波', role: 'staff', email: 'mywubo.sc@chinatelecom.cn' },
+        { id: '12', name: '高竹英', role: 'staff', email: 'mygaozhuying.sc@chinatelecom.cn' },
+        { id: '13', name: '杜小东', role: 'staff', email: 'myduxiaodong.sc@chinatelecom.cn' },
+        { id: '14', name: '张艺林', role: 'staff', email: 'zhangyl51@chinatelecom.cn' }
     ];
 
     let EMPLOYEES = [];
@@ -845,8 +844,7 @@
             const tag = emp.role === 'director' ? ' <span style="color:#ef4444;font-size:11px;">[管理员]</span>' : emp.role === 'deputy' ? ' <span style="color:#f59e0b;font-size:11px;">[副职]</span>' : '';
             return '<tr><td style="text-align:center;font-weight:600;color:#6b7280;">' + (i+1) + '</td>' +
                 '<td class="editable-cell" onclick="editEmployee(\'' + emp.id + '\',\'name\')">' + emp.name + tag + '</td>' +
-                '<td class="editable-cell" onclick="editEmployee(\'' + emp.id + '\',\'phone\')">' + emp.phone + '</td>' +
-                '<td>' + emp.email + '</td>' +
+                '<td class="editable-cell" onclick="editEmployee(\'' + emp.id + '\',\'email\')">' + emp.email + '</td>' +
                 '<td><button class="btn btn-danger btn-sm" onclick="deleteEmployee(\'' + emp.id + '\')" ' + (emp.role === 'director' ? 'disabled' : '') + ' style="width:auto;padding:5px 10px;font-size:11px;">&#128465;</button></td></tr>';
         }).join('');
     }
@@ -854,11 +852,11 @@
     function editEmployee(empId, field) {
         const emp = EMPLOYEES.find(e => e.id === empId);
         if (!emp) return;
-        const label = field === 'name' ? '姓名' : '手机号';
+        const label = field === 'name' ? '姓名' : '邮箱';
         const val = prompt('请输入新的' + label + '：', emp[field]);
         if (val === null || val.trim() === '') return;
         const trimmed = val.trim();
-        if (field === 'phone' && !/^1[3-9]\d{9}$/.test(trimmed)) { showToast('请输入有效的11位手机号', 'error'); return; }
+        if (field === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) { showToast('请输入有效的邮箱地址', 'error'); return; }
         emp[field] = trimmed;
         saveEmployeeData(); initEmployeesTable();
         showToast('已更新', 'success');
@@ -866,22 +864,19 @@
 
     function showAddEmployeeModal() {
         document.getElementById('addEmployeeModal').classList.remove('hidden');
-        ['newEmpName','newEmpPhone','newEmpEmail'].forEach(id => document.getElementById(id).value = '');
+        ['newEmpName','newEmpEmail'].forEach(id => document.getElementById(id).value = '');
         document.getElementById('newEmpRole').value = 'staff';
     }
     function closeAddEmployeeModal() { document.getElementById('addEmployeeModal').classList.add('hidden'); }
 
     function saveNewEmployee() {
         const name = document.getElementById('newEmpName').value.trim();
-        const phone = document.getElementById('newEmpPhone').value.trim();
         const email = document.getElementById('newEmpEmail').value.trim();
         const role = document.getElementById('newEmpRole').value;
         if (!name) { showToast('请输入员工姓名', 'error'); return; }
-        if (!phone || !/^1[3-9]\d{9}$/.test(phone)) { showToast('请输入有效的11位手机号', 'error'); return; }
         if (!email) { showToast('请输入邮箱地址', 'error'); return; }
-        if (EMPLOYEES.some(e => e.phone === phone)) { showToast('手机号已被使用', 'error'); return; }
         if (EMPLOYEES.some(e => e.email === email)) { showToast('邮箱已被使用', 'error'); return; }
-        EMPLOYEES.push({ id: String(EMPLOYEES.length + 1), name, phone, email, role });
+        EMPLOYEES.push({ id: String(EMPLOYEES.length + 1), name, email, role });
         saveEmployeeData(); closeAddEmployeeModal(); initEmployeesTable();
         showToast('已添加新员工：' + name, 'success');
     }
