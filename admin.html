@@ -89,7 +89,26 @@
         @keyframes slideIn { from { opacity: 0; transform: translateX(100px); } to { opacity: 1; transform: translateX(0); } }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
         .admin-badge { display: inline-flex; align-items: center; gap: 4px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 4px 10px; border-radius: 14px; font-size: 11px; margin-bottom: 14px; }
-        @media (max-width: 768px) { .header { flex-direction: column; gap: 15px; text-align: center; } .nav-tabs { flex-wrap: wrap; justify-content: center; } .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+        .eval-item { background: #f9fafb; border-radius: 6px; padding: 9px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .eval-item-info { display: flex; align-items: center; gap: 8px; }
+        .eval-item-avatar { width: 30px; height: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; }
+        .eval-item-name { font-weight: 600; color: #374151; font-size: 13px; }
+        .eval-btn-group { display: inline-flex; border-radius: 6px; overflow: hidden; border: 1.5px solid #e0e6ed; }
+        .eval-btn { padding: 7px 14px; border: none; background: white; cursor: pointer; font-weight: bold; font-size: 13px; transition: all 0.2s; }
+        .eval-btn:not(:last-child) { border-right: 1px solid #e0e6ed; }
+        .eval-btn:hover { background: #f3f4f6; }
+        .eval-btn.selected { color: white; }
+        .eval-btn.selected.score-90 { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .eval-btn.selected.score-75 { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .eval-btn.selected.score-60 { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+        .eval-stats { display: flex; gap: 12px; margin-bottom: 14px; padding: 10px; background: #f3f4f6; border-radius: 8px; }
+        .eval-stat { flex: 1; text-align: center; padding: 8px; border-radius: 6px; }
+        .eval-stat.high { background: #d1fae5; }
+        .eval-stat.mid { background: #fef3c7; }
+        .eval-stat.low { background: #fee2e2; }
+        .eval-stat-val { font-size: 20px; font-weight: bold; }
+        .eval-stat-lbl { font-size: 11px; color: #6b7280; margin-top: 3px; }
+        @media (max-width: 768px) { .header { flex-direction: column; gap: 15px; text-align: center; } .nav-tabs { flex-wrap: wrap; justify-content: center; } .stats-grid { grid-template-columns: repeat(2, 1fr); } .eval-item { flex-direction: column; gap: 10px; align-items: flex-start; } }
     </style>
 </head>
 <body>
@@ -132,6 +151,7 @@
         </div>
         <div class="nav-tabs">
             <button class="nav-tab active" data-tab="status" onclick="switchTab('status')">&#128202; 评价进度</button>
+            <button class="nav-tab" data-tab="evaluate" onclick="switchTab('evaluate')">&#9997; 领导评分</button>
             <button class="nav-tab" data-tab="sendlink" onclick="switchTab('sendlink')">&#128231; 发送链接</button>
             <button class="nav-tab" data-tab="data" onclick="switchTab('data')">&#129504; 数据管理</button>
             <button class="nav-tab" data-tab="employees" onclick="switchTab('employees')">&#128101; 员工管理</button>
@@ -151,6 +171,30 @@
                 <h4 style="margin:14px 0 10px;font-size:13px;">&#128203; 详细进度</h4>
                 <div id="progressList"></div>
                 <div class="action-buttons" style="margin-top:14px;"><button class="btn btn-secondary btn-sm" onclick="initStatusPage()">&#128260; 刷新进度</button></div>
+            </div>
+            <!-- 领导评分 -->
+            <div id="evaluateTab" class="tab-content hidden">
+                <div class="rules-box">
+                    <h4>&#9888;&#65039; 领导评分规则（正职：权重30%）</h4>
+                    <ul>
+                        <li><strong>评分档次</strong>：90分（优秀）、75分（良好）、60分（合格）</li>
+                        <li><strong>90分</strong>：最多给 <strong>4人</strong>（当前已选：<span id="adminHighCount" class="badge badge-director">0</span>人）</li>
+                        <li><strong>60分</strong>：至少给 <strong>2人</strong>（当前已选：<span id="adminLowCount" class="badge badge-director">0</span>人）</li>
+                        <li>需对所有普通员工进行评分</li>
+                    </ul>
+                </div>
+                <div class="eval-stats">
+                    <div class="eval-stat high"><div class="eval-stat-val" id="adminStat90">0</div><div class="eval-stat-lbl">90分（优秀）</div></div>
+                    <div class="eval-stat mid"><div class="eval-stat-val" id="adminStat75">0</div><div class="eval-stat-lbl">75分（良好）</div></div>
+                    <div class="eval-stat low"><div class="eval-stat-val" id="adminStat60">0</div><div class="eval-stat-lbl">60分（合格）</div></div>
+                </div>
+                <h3>&#128172; 请为每位员工评分</h3>
+                <p style="color:#6b7280;margin-bottom:14px;font-size:12px;">点击按钮选择评分档次</p>
+                <div id="adminEvalList"></div>
+                <div class="action-buttons">
+                    <button class="btn btn-success" onclick="submitAdminEvaluations()">&#9989; 提交评分</button>
+                    <button class="btn btn-secondary" onclick="clearAdminEvaluations()">&#128465; 清空</button>
+                </div>
             </div>
             <!-- 发送链接 -->
             <div id="sendlinkTab" class="tab-content hidden">
@@ -348,6 +392,7 @@
         const btn = document.querySelector('.nav-tab[data-tab="' + tabName + '"]');
         if (btn) btn.classList.add('active');
         if (tabName === 'status') initStatusPage();
+        else if (tabName === 'evaluate') initAdminEvaluate();
         else if (tabName === 'sendlink') initSendLinkList();
         else if (tabName === 'employees') initEmployeesTable();
         else if (tabName === 'results') initAdminResults();
@@ -383,6 +428,71 @@
                 '<span style="color:' + clr + ';font-size:13px;">' + d.cnt + '/' + d.req + ' ' + (d.done ? '&#9989; 已完成' : '&#9203; 进行中') + '</span></div>' +
                 '<div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%;background:' + clr + ';"></div></div></div>';
         }).join('');
+    }
+
+    // ==========================================
+    // 管理员评分（正职领导评分）
+    // ==========================================
+    const ADMIN_ID = '1'; // 杨洪均的 id
+    const SCORE_RULES = { HIGH_MAX: 4, LOW_MIN: 2 };
+
+    function initAdminEvaluate() {
+        const staff = EMPLOYEES.filter(e => e.role === 'staff');
+        const list = document.getElementById('adminEvalList');
+        const myEval = systemData.evaluations[ADMIN_ID] || {};
+        list.innerHTML = staff.map(emp => {
+            const s = myEval[emp.id] || null;
+            return '<div class="eval-item"><div class="eval-item-info"><div class="eval-item-avatar">' + emp.name[0] + '</div><div class="eval-item-name">' + emp.name + '</div></div>' +
+                '<div class="eval-btn-group">' +
+                '<button class="eval-btn score-90 ' + (s === 90 ? 'selected' : '') + '" onclick="setAdminScore(\'' + emp.id + '\',90)">90</button>' +
+                '<button class="eval-btn score-75 ' + (s === 75 ? 'selected' : '') + '" onclick="setAdminScore(\'' + emp.id + '\',75)">75</button>' +
+                '<button class="eval-btn score-60 ' + (s === 60 ? 'selected' : '') + '" onclick="setAdminScore(\'' + emp.id + '\',60)">60</button></div></div>';
+        }).join('');
+        updateAdminScoreCounts();
+    }
+
+    function updateAdminScoreCounts() {
+        const myEval = systemData.evaluations[ADMIN_ID] || {};
+        let c90 = 0, c75 = 0, c60 = 0;
+        Object.values(myEval).forEach(s => { if (s === 90) c90++; else if (s === 75) c75++; else if (s === 60) c60++; });
+        document.getElementById('adminHighCount').textContent = c90;
+        document.getElementById('adminLowCount').textContent = c60;
+        document.getElementById('adminStat90').textContent = c90;
+        document.getElementById('adminStat75').textContent = c75;
+        document.getElementById('adminStat60').textContent = c60;
+    }
+
+    function setAdminScore(empId, score) {
+        const myEval = systemData.evaluations[ADMIN_ID] || {};
+        const oldScore = myEval[empId];
+        let counts = { 90: 0, 75: 0, 60: 0 };
+        Object.values(myEval).forEach(s => { if (s === 90) counts[90]++; else if (s === 75) counts[75]++; else if (s === 60) counts[60]++; });
+        if (oldScore === score) { delete myEval[empId]; systemData.evaluations[ADMIN_ID] = myEval; saveState(); updateAdminScoreCounts(); initAdminEvaluate(); return; }
+        if (oldScore) counts[oldScore]--;
+        if (score === 90 && counts[90] >= SCORE_RULES.HIGH_MAX) { showToast('90分档位最多只能选择 ' + SCORE_RULES.HIGH_MAX + ' 人', 'warning'); return; }
+        if (oldScore === 60 && counts[60] < SCORE_RULES.LOW_MIN) { showToast('60分档位必须至少选择 ' + SCORE_RULES.LOW_MIN + ' 人', 'warning'); return; }
+        myEval[empId] = score;
+        systemData.evaluations[ADMIN_ID] = myEval;
+        saveState(); updateAdminScoreCounts(); initAdminEvaluate();
+    }
+
+    function submitAdminEvaluations() {
+        const myEval = systemData.evaluations[ADMIN_ID] || {};
+        const staff = EMPLOYEES.filter(e => e.role === 'staff');
+        const evaluated = Object.keys(myEval).length;
+        if (evaluated === 0) { showToast('请先为至少一位员工评分', 'warning'); return; }
+        let c90 = 0, c60 = 0;
+        Object.values(myEval).forEach(s => { if (s === 90) c90++; if (s === 60) c60++; });
+        if (c90 > SCORE_RULES.HIGH_MAX) { showToast('90分最多 ' + SCORE_RULES.HIGH_MAX + ' 人，当前选了 ' + c90 + ' 人', 'error'); return; }
+        if (c60 < SCORE_RULES.LOW_MIN) { showToast('60分至少 ' + SCORE_RULES.LOW_MIN + ' 人，当前只选了 ' + c60 + ' 人', 'error'); return; }
+        saveState(); initStatusPage();
+        showToast('领导评分已成功提交！已评 ' + evaluated + '/' + staff.length + ' 人', 'success');
+    }
+
+    function clearAdminEvaluations() {
+        systemData.evaluations[ADMIN_ID] = {};
+        saveState(); initAdminEvaluate();
+        showToast('已清空评分', 'info');
     }
 
     // ==========================================
