@@ -371,8 +371,15 @@
 
     async function submitEvaluations() {
         const myEval = systemData.evaluations[currentUser.id] || {};
-        const evaluated = Object.keys(myEval).length;
-        if (evaluated === 0) { showToast('请先为至少一位同事评分', 'warning'); return; }
+        // 计算需要评分的人数
+        let evaluatees = [];
+        if (currentUser.role === 'deputy') {
+            evaluatees = EMPLOYEES.filter(e => e.role === 'staff');
+        } else {
+            evaluatees = EMPLOYEES.filter(e => e.role === 'staff' && e.id !== currentUser.id);
+        }
+        const evaluated = evaluatees.filter(e => myEval[e.id]).length;
+        if (evaluated < evaluatees.length) { showToast('请为所有员工评分（当前 ' + evaluated + '/' + evaluatees.length + '）', 'warning'); return; }
         let c90 = 0, c60 = 0;
         Object.values(myEval).forEach(s => { if (s === 90) c90++; if (s === 60) c60++; });
         if (c90 > SCORE_RULES.HIGH_MAX) { showToast('90分最多 ' + SCORE_RULES.HIGH_MAX + ' 人，当前选了 ' + c90 + ' 人', 'error'); return; }
