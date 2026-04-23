@@ -185,26 +185,33 @@
         return fetchJSONBin();
     }
     async function fetchJSONBin() {
-        try {
-            const headers = { 'Content-Type': 'application/json' };
-            if (JSONBIN_API_KEY) headers['X-Master-Key'] = JSONBIN_API_KEY;
-            const res = await fetch(JSONBIN_URL, { headers });
-            if (!res.ok) return;
-            const json = await res.json();
-            if (json.record && json.record.evaluations) {
-                const cloudData = json.record;
-                // 同步员工列表（如果云端有则覆盖本地）
-                if (cloudData.employees && cloudData.employees.length > 0) {
-                    EMPLOYEES = cloudData.employees;
-                    localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
+        const headers = { 'Content-Type': 'application/json' };
+        if (JSONBIN_API_KEY) headers['X-Master-Key'] = JSONBIN_API_KEY;
+        for (let retry = 0; retry < 3; retry++) {
+            try {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 8000); // 8秒超时
+                const res = await fetch(JSONBIN_URL, { headers, signal: controller.signal });
+                clearTimeout(timer);
+                if (!res.ok) { if (retry < 2) await new Promise(r => setTimeout(r, 500)); continue; }
+                const json = await res.json();
+                if (json.record && json.record.evaluations) {
+                    const cloudData = json.record;
+                    if (cloudData.employees && cloudData.employees.length > 0) {
+                        EMPLOYEES = cloudData.employees;
+                        localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
+                    }
+                    if (!systemData.lastUpdated || cloudData.lastUpdated > systemData.lastUpdated) {
+                        systemData = cloudData;
+                        localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
+                    }
                 }
-                // 云端数据比本地新才覆盖
-                if (!systemData.lastUpdated || cloudData.lastUpdated > systemData.lastUpdated) {
-                    systemData = cloudData;
-                    localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
-                }
+                return; // 成功则退出
+            } catch (e) {
+                if (retry < 2) await new Promise(r => setTimeout(r, 500 * (retry + 1)));
             }
-        } catch (e) { /* 网络失败静默，用本地数据 */ }
+        }
+        console.warn('fetchJSONBin: 3次重试均失败，使用本地数据');
     }
     function saveState() {
         systemData.lastUpdated = new Date().toISOString();
@@ -215,41 +222,25 @@
     }
     async function pushToJSONBin() {
         if (!JSONBIN_API_KEY) return;
-        // 先从云端拉取最新数据，合并后再上传，防止覆盖
-        try {
-            const headers = { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY };
-            // 第1步：拉取云端最新数据
-            const latestRes = await fetch(JSONBIN_URL, { headers });
-            if (latestRes.ok) {
-                const latestJson = await latestRes.json();
-                if (latestJson.record && latestJson.record.evaluations) {
-                    const cloudData = latestJson.record;
-                    // 合并策略：以云端为基础，用本地各用户的评价覆盖（每个用户独立）
-                    const merged = { evaluations: { ...cloudData.evaluations }, lastUpdated: new Date().toISOString() };
-                    Object.entries(systemData.evaluations).forEach(([uid, evs]) => {
-                        merged.evaluations[uid] = evs;
-                    });
-                    systemData = merged;
-                    localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
-                }
+        const headers = { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY };
+        for (let retry = 0; retry < 3; retry++) {
+            try {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 10000);
+                const res = await fetch(JSONBIN_UPDATE_URL, {
+                    method: 'PUT',
+                    headers,
+                    signal: controller.signal,
+                    body: JSON.stringify(systemData)
+                });
+                clearTimeout(timer);
+                if (res.ok) return;
+                await new Promise(r => setTimeout(r, 1000 * (retry + 1)));
+            } catch (netErr) {
+                if (retry === 2) { showToast('数据保存到云端失败，已存本地，请检查网络', 'warning'); return; }
+                await new Promise(r => setTimeout(r, 1000 * (retry + 1)));
             }
-            // 第2步：上传合并后的数据，带重试
-            for (let retry = 0; retry < 3; retry++) {
-                try {
-                    const res = await fetch(JSONBIN_UPDATE_URL, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY },
-                        body: JSON.stringify(systemData)
-                    });
-                    if (res.ok) return; // 上传成功
-                    // 非成功状态码，等待后重试
-                    await new Promise(r => setTimeout(r, 1000 * (retry + 1)));
-                } catch (netErr) {
-                    if (retry === 2) { showToast('数据保存到云端失败，已存本地，请检查网络', 'warning'); return; }
-                    await new Promise(r => setTimeout(r, 1000 * (retry + 1)));
-                }
-            }
-        } catch (e) { showToast('云端同步异常，数据已保存在本地', 'warning'); }
+        }
     }
 
     function showLoginInterface() {
@@ -269,11 +260,17 @@
     }
 
     async function handleLinkLogin(token) {
+        // 先显示加载状态
+        showLoginInterface();
+        document.getElementById('loginWaiting').innerHTML = '<div class="spinner"></div> 正在连接服务器...';
+        document.getElementById('loginWaiting').classList.remove('hidden');
+        document.getElementById('loginError').classList.add('hidden');
+        document.getElementById('logoutNotice').classList.add('hidden');
         try {
             const decoded = JSON.parse(decodeURIComponent(escape(atob(token))));
             if (!decoded.id || !decoded.name || !decoded.role) throw new Error('缺少必要字段');
             if (decoded.role === 'director') throw new Error('请使用管理员页面登录');
-            // 先从云端拉取最新员工列表，再校验（解决新建员工后旧列表找不到的问题）
+            // 先从云端拉取最新员工列表，再校验
             await fetchJSONBin();
             const empExists = EMPLOYEES.some(e => e.id === decoded.id && e.name === decoded.name);
             if (!empExists) throw new Error('员工不存在');

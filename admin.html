@@ -383,29 +383,36 @@
         fetchJSONBin();
     }
     async function fetchJSONBin() {
-        try {
-            const headers = { 'Content-Type': 'application/json' };
-            if (JSONBIN_API_KEY) headers['X-Master-Key'] = JSONBIN_API_KEY;
-            const res = await fetch(JSONBIN_URL, { headers });
-            if (!res.ok) return;
-            const json = await res.json();
-            if (json.record && json.record.evaluations) {
-                const cloudData = json.record;
-                if (!systemData.lastUpdated || cloudData.lastUpdated > systemData.lastUpdated) {
-                    systemData = cloudData;
-                    localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
+        const headers = { 'Content-Type': 'application/json' };
+        if (JSONBIN_API_KEY) headers['X-Master-Key'] = JSONBIN_API_KEY;
+        for (let retry = 0; retry < 3; retry++) {
+            try {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 8000);
+                const res = await fetch(JSONBIN_URL, { headers, signal: controller.signal });
+                clearTimeout(timer);
+                if (!res.ok) { if (retry < 2) await new Promise(r => setTimeout(r, 500)); continue; }
+                const json = await res.json();
+                if (json.record && json.record.evaluations) {
+                    const cloudData = json.record;
+                    if (!systemData.lastUpdated || cloudData.lastUpdated > systemData.lastUpdated) {
+                        systemData = cloudData;
+                        localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
+                    }
+                    if (cloudData.adminPasswordHash && !localStorage.getItem(ADMIN_PASSWORD_KEY)) {
+                        localStorage.setItem(ADMIN_PASSWORD_KEY, cloudData.adminPasswordHash);
+                    }
+                    if (cloudData.employees && cloudData.employees.length > 0) {
+                        EMPLOYEES = cloudData.employees;
+                        localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
+                    }
                 }
-                // 同步管理员密码（如果云端有而本地没有）
-                if (cloudData.adminPasswordHash && !localStorage.getItem(ADMIN_PASSWORD_KEY)) {
-                    localStorage.setItem(ADMIN_PASSWORD_KEY, cloudData.adminPasswordHash);
-                }
-                // 同步员工列表（如果云端有则覆盖本地）
-                if (cloudData.employees && cloudData.employees.length > 0) {
-                    EMPLOYEES = cloudData.employees;
-                    localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
-                }
+                return;
+            } catch (e) {
+                if (retry < 2) await new Promise(r => setTimeout(r, 500 * (retry + 1)));
             }
-        } catch (e) { /* 网络失败静默 */ }
+        }
+        console.warn('fetchJSONBin: 3次重试均失败，使用本地数据');
     }
     function saveState() {
         systemData.lastUpdated = new Date().toISOString();
@@ -415,42 +422,26 @@
     }
     async function pushToJSONBin() {
         if (!JSONBIN_API_KEY) return;
-        try {
-            const headers = { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY };
-            // 拉取云端最新数据并合并
-            const latestRes = await fetch(JSONBIN_URL, { headers });
-            if (latestRes.ok) {
-                const latestJson = await latestRes.json();
-                if (latestJson.record && latestJson.record.evaluations) {
-                    const cloudData = latestJson.record;
-                    const merged = { evaluations: { ...cloudData.evaluations }, lastUpdated: new Date().toISOString() };
-                    // 保留云端可能有的额外字段（如 adminPasswordHash、employees）
-                    if (cloudData.adminPasswordHash) merged.adminPasswordHash = cloudData.adminPasswordHash;
-                    if (cloudData.employees) merged.employees = cloudData.employees;
-                    Object.entries(systemData.evaluations).forEach(([uid, evs]) => {
-                        merged.evaluations[uid] = evs;
-                    });
-                    if (systemData.adminPasswordHash) merged.adminPasswordHash = systemData.adminPasswordHash;
-                    systemData = merged;
-                    localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
-                }
+        const headers = { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY };
+        // 乐观写入：直接上传本地最新数据，带重试
+        for (let retry = 0; retry < 3; retry++) {
+            try {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 10000);
+                const res = await fetch(JSONBIN_UPDATE_URL, {
+                    method: 'PUT',
+                    headers,
+                    signal: controller.signal,
+                    body: JSON.stringify(systemData)
+                });
+                clearTimeout(timer);
+                if (res.ok) return;
+                await new Promise(r => setTimeout(r, 1000 * (retry + 1)));
+            } catch (netErr) {
+                if (retry === 2) { showToast('数据保存到云端失败，已存本地', 'warning'); return; }
+                await new Promise(r => setTimeout(r, 1000 * (retry + 1)));
             }
-            // 上传，带重试
-            for (let retry = 0; retry < 3; retry++) {
-                try {
-                    const res = await fetch(JSONBIN_UPDATE_URL, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY },
-                        body: JSON.stringify(systemData)
-                    });
-                    if (res.ok) return;
-                    await new Promise(r => setTimeout(r, 1000 * (retry + 1)));
-                } catch (netErr) {
-                    if (retry === 2) { showToast('数据保存到云端失败，已存本地', 'warning'); return; }
-                    await new Promise(r => setTimeout(r, 1000 * (retry + 1)));
-                }
-            }
-        } catch (e) { showToast('云端同步异常，数据已保存在本地', 'warning'); }
+        }
     }
     // 强制从云端刷新（覆盖本地）
     async function forceSyncFromCloud() {
