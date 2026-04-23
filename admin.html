@@ -682,8 +682,9 @@
     function deselectAllEmployees() { document.querySelectorAll('#sendLinkList input[type="checkbox"]').forEach(cb => cb.checked = false); }
 
     function generateLoginToken(emp) {
-        const d = { id: emp.id, name: emp.name, role: emp.role, email: emp.email, ts: Date.now() };
-        return btoa(encodeURIComponent(JSON.stringify(d)).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode('0x' + p1)));
+        const d = { id: emp.id, name: emp.name, role: emp.role };
+        // 用 encodeURIComponent + btoa，确保中文正确编码且 token 尽量短
+        return btoa(unescape(encodeURIComponent(JSON.stringify(d))));
     }
 
     function getSiteBaseURL() {

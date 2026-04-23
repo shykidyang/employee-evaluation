@@ -270,14 +270,16 @@
 
     async function handleLinkLogin(token) {
         try {
-            const decoded = JSON.parse(decodeURIComponent(Array.from(atob(token), c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+            const decoded = JSON.parse(decodeURIComponent(escape(atob(token))));
             if (!decoded.id || !decoded.name || !decoded.role) throw new Error('缺少必要字段');
             if (decoded.role === 'director') throw new Error('请使用管理员页面登录');
             // 先从云端拉取最新员工列表，再校验（解决新建员工后旧列表找不到的问题）
             await fetchJSONBin();
             const empExists = EMPLOYEES.some(e => e.id === decoded.id && e.name === decoded.name);
             if (!empExists) throw new Error('员工不存在');
-            currentUser = { id: decoded.id, name: decoded.name, role: decoded.role, email: decoded.email || '' };
+            // 从 EMPLOYEES 获取完整信息（含 email）
+            const emp = EMPLOYEES.find(e => e.id === decoded.id);
+            currentUser = { id: emp.id, name: emp.name, role: emp.role, email: emp.email || '' };
             localStorage.setItem('current_user_v2', JSON.stringify(currentUser));
             const url = new URL(window.location.href);
             url.searchParams.delete('token');
