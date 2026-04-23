@@ -158,7 +158,7 @@
     let saveTimer = null; // 防抖计时器
 
     function init() {
-        loadEmployees(); loadState();
+        loadEmployees();
         const urlParams = new URLSearchParams(window.location.search);
         const loginToken = urlParams.get('token');
         if (loginToken) { handleLinkLogin(loginToken); return; }
@@ -167,7 +167,8 @@
             const user = JSON.parse(savedUser);
             if (EMPLOYEES.some(e => e.id === user.id)) {
                 currentUser = user;
-                showMainInterface();
+                // 等云端数据拉取完成后再渲染页面
+                loadState().then(() => { showMainInterface(); });
                 return;
             }
         }
@@ -182,8 +183,8 @@
     function loadState() {
         const saved = localStorage.getItem(STATE_KEY);
         systemData = saved ? JSON.parse(saved) : { evaluations: {}, lastUpdated: new Date().toISOString() };
-        // 异步从云端拉取最新数据
-        fetchJSONBin();
+        // 异步从云端拉取最新数据，返回 Promise
+        return fetchJSONBin();
     }
     async function fetchJSONBin() {
         try {
@@ -203,7 +204,6 @@
                 if (!systemData.lastUpdated || cloudData.lastUpdated > systemData.lastUpdated) {
                     systemData = cloudData;
                     localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
-                    if (currentUser) initEvaluationPage(); // 刷新页面展示
                 }
             }
         } catch (e) { /* 网络失败静默，用本地数据 */ }
@@ -283,7 +283,8 @@
             const url = new URL(window.location.href);
             url.searchParams.delete('token');
             window.history.replaceState({}, '', url.pathname);
-            showMainInterface();
+            // 等云端数据拉取完成后再渲染页面
+            loadState().then(() => { showMainInterface(); });
         } catch (e) {
             console.error('登录链接解析失败:', e);
             showLoginInterface();
