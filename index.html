@@ -211,14 +211,42 @@
         saveTimer = setTimeout(pushToJSONBin, 1000);
     }
     async function pushToJSONBin() {
-        if (!JSONBIN_API_KEY) return; // 没有API Key则不上传
+        if (!JSONBIN_API_KEY) return;
+        // 先从云端拉取最新数据，合并后再上传，防止覆盖
         try {
-            await fetch(JSONBIN_UPDATE_URL, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY },
-                body: JSON.stringify(systemData)
-            });
-        } catch (e) { /* 上传失败静默 */ }
+            const headers = { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY };
+            // 第1步：拉取云端最新数据
+            const latestRes = await fetch(JSONBIN_URL, { headers });
+            if (latestRes.ok) {
+                const latestJson = await latestRes.json();
+                if (latestJson.record && latestJson.record.evaluations) {
+                    const cloudData = latestJson.record;
+                    // 合并策略：以云端为基础，用本地各用户的评价覆盖（每个用户独立）
+                    const merged = { evaluations: { ...cloudData.evaluations }, lastUpdated: new Date().toISOString() };
+                    Object.entries(systemData.evaluations).forEach(([uid, evs]) => {
+                        merged.evaluations[uid] = evs;
+                    });
+                    systemData = merged;
+                    localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
+                }
+            }
+            // 第2步：上传合并后的数据，带重试
+            for (let retry = 0; retry < 3; retry++) {
+                try {
+                    const res = await fetch(JSONBIN_UPDATE_URL, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY },
+                        body: JSON.stringify(systemData)
+                    });
+                    if (res.ok) return; // 上传成功
+                    // 非成功状态码，等待后重试
+                    await new Promise(r => setTimeout(r, 1000 * (retry + 1)));
+                } catch (netErr) {
+                    if (retry === 2) { showToast('数据保存到云端失败，已存本地，请检查网络', 'warning'); return; }
+                    await new Promise(r => setTimeout(r, 1000 * (retry + 1)));
+                }
+            }
+        } catch (e) { showToast('云端同步异常，数据已保存在本地', 'warning'); }
     }
 
     function showLoginInterface() {
@@ -323,7 +351,7 @@
         document.getElementById('stat60').textContent = c60;
     }
 
-    function submitEvaluations() {
+    async function submitEvaluations() {
         const myEval = systemData.evaluations[currentUser.id] || {};
         const evaluated = Object.keys(myEval).length;
         if (evaluated === 0) { showToast('请先为至少一位同事评分', 'warning'); return; }
@@ -331,6 +359,28 @@
         Object.values(myEval).forEach(s => { if (s === 90) c90++; if (s === 60) c60++; });
         if (c90 > SCORE_RULES.HIGH_MAX) { showToast('90分最多 ' + SCORE_RULES.HIGH_MAX + ' 人，当前选了 ' + c90 + ' 人', 'error'); return; }
         if (c60 < SCORE_RULES.LOW_MIN) { showToast('60分至少 ' + SCORE_RULES.LOW_MIN + ' 人，当前只选了 ' + c60 + ' 人', 'error'); return; }
+
+        // 检测是否已提交过：对比云端数据
+        try {
+            const headers = { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY };
+            const res = await fetch(JSONBIN_URL, { headers });
+            if (res.ok) {
+                const json = await res.json();
+                if (json.record && json.record.evaluations && json.record.evaluations[currentUser.id]) {
+                    const cloudEval = json.record.evaluations[currentUser.id];
+                    const localStr = JSON.stringify(myEval);
+                    const cloudStr = JSON.stringify(cloudEval);
+                    if (localStr === cloudStr) {
+                        // 数据完全一致，说明已提交且未修改
+                        showToast('已完成评价，数据与云端一致。如需修改请调整分数后重新提交。', 'info');
+                        return;
+                    }
+                    // 数据不同，说明有修改
+                    showToast('检测到您已提交过评价，本次将更新为修改后的数据', 'warning');
+                }
+            }
+        } catch (e) { /* 网络问题不阻断提交 */ }
+
         saveState();
         showToast('评价已成功提交！', 'success');
     }
