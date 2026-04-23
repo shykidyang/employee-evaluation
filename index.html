@@ -253,6 +253,7 @@
     }
 
     function showMainInterface() {
+        if (!systemData) systemData = JSON.parse(localStorage.getItem(STATE_KEY) || 'null') || { evaluations: {}, lastUpdated: new Date().toISOString() };
         document.getElementById('loginPage').classList.add('hidden');
         document.getElementById('mainPage').classList.remove('hidden');
         document.getElementById('userAvatar').textContent = currentUser.name[0];
@@ -282,6 +283,8 @@
             const url = new URL(window.location.href);
             url.searchParams.delete('token');
             window.history.replaceState({}, '', url.pathname);
+            // 确保 systemData 已初始化（防止 null 导致 evaluations 报错）
+            if (!systemData) systemData = JSON.parse(localStorage.getItem(STATE_KEY) || 'null') || { evaluations: {}, lastUpdated: new Date().toISOString() };
             showMainInterface();
         } catch (e) {
             console.error('登录链接解析失败:', e);
