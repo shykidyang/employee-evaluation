@@ -288,16 +288,18 @@
         document.getElementById('loginWaiting').classList.remove('hidden');
     }
 
-    function showMainInterface() {
+    async function showMainInterface() {
         if (!systemData) systemData = JSON.parse(localStorage.getItem(STATE_KEY) || 'null') || { evaluations: {}, lastUpdated: new Date().toISOString() };
-        // 每次显示主界面时，重新从 localStorage 读取最新员工列表（管理端可能刚修改过）
+        // 每次显示主界面时，先从云端同步最新数据（确保员工信息、评价数据都是最新的）
+        try { await fetchCloudData(); } catch(e) {}
+        // 从本地（已被云端更新）读取最新员工列表
         const freshEmp = localStorage.getItem('employees_v2_data');
         if (freshEmp) {
             try {
                 const parsed = JSON.parse(freshEmp);
                 if (parsed.length > 0) {
                     EMPLOYEES = parsed;
-                    // 同步更新当前用户信息
+                    // 同步更新当前用户信息（管理端可能改了姓名）
                     if (currentUser) {
                         const updated = parsed.find(e => e.id === currentUser.id);
                         if (updated) {
@@ -326,14 +328,10 @@
             const decoded = JSON.parse(decodeURIComponent(escape(atob(token))));
             if (!decoded.id || !decoded.name || !decoded.role) throw new Error('缺少必要字段');
             if (decoded.role === 'director') throw new Error('请使用管理员页面登录');
-            // 先用本地 employees 校验，不等云端（避免网络慢导致超时）
+            // 先从云端拉最新员工列表（管理端可能刚改过姓名/角色等）
+            document.getElementById('loginWaiting').innerHTML = '<div class="spinner"></div> 正在同步最新员工数据...';
+            await fetchCloudData();
             let emp = EMPLOYEES.find(e => e.id === decoded.id);
-            if (!emp) {
-                // 本地没有，尝试从云端拉
-                document.getElementById('loginWaiting').innerHTML = '<div class="spinner"></div> 正在从云端同步员工数据...';
-                await fetchCloudData();
-                emp = EMPLOYEES.find(e => e.id === decoded.id);
-            }
             if (!emp) {
                 // 云端也没有，信任管理员发送的 token，自动注册该员工
                 emp = { id: decoded.id, name: decoded.name, role: decoded.role, email: decoded.email || '' };
@@ -348,8 +346,6 @@
             // 确保 systemData 已初始化
             if (!systemData) systemData = JSON.parse(localStorage.getItem(STATE_KEY) || 'null') || { evaluations: {}, lastUpdated: new Date().toISOString() };
             showMainInterface();
-            // 登录成功后，后台异步同步云端数据
-            fetchCloudData();
         } catch (e) {
             console.error('登录链接解析失败:', e);
             showLoginInterface();
