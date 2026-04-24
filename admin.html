@@ -345,17 +345,8 @@
     // ==========================================
     function init() {
         loadEmployees();
-        // 先加载本地数据，再异步拉云端并确保 employees 上传
-        loadState().then(() => {
-            // 云端数据拉取完成后，确保 systemData 包含最新 employees 并上传
-            if (EMPLOYEES.length > 0) {
-                systemData.employees = EMPLOYEES;
-                systemData.lastUpdated = new Date().toISOString();
-                localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
-                // 立即上传（不等防抖）
-                pushToCloud();
-            }
-        });
+        // 异步拉取云端数据（不主动 push，避免覆盖员工端刚提交的评价）
+        loadState();
         if (sessionStorage.getItem('admin_logged_in') === 'true') { showMainInterface(); return; }
         if (!localStorage.getItem(ADMIN_PASSWORD_KEY)) {
             document.getElementById('loginForm').classList.add('hidden');
@@ -383,13 +374,10 @@
     }
     function saveEmployeeData() {
         localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
-        // 同步到云端（防抖上传）
+        // 只更新本地 systemData，不立即 pushToCloud（避免覆盖员工端评价数据）
         if (!systemData) systemData = JSON.parse(localStorage.getItem(STATE_KEY) || '{}');
         systemData.employees = EMPLOYEES;
-        systemData.lastUpdated = new Date().toISOString();
         localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
-        if (saveTimer) clearTimeout(saveTimer);
-        saveTimer = setTimeout(pushToCloud, 1000);
     }
     function loadState() {
         const saved = localStorage.getItem(STATE_KEY);
@@ -408,15 +396,31 @@
                 if (!res.ok) { if (retry < 2) await new Promise(r => setTimeout(r, 500)); continue; }
                 const cloudData = await res.json();
                 if (cloudData.evaluations !== undefined) {
-                    // 合并云端数据，但 employees 始终以本地为准（管理端是数据源头）
-                    if (!systemData.lastUpdated || (cloudData.lastUpdated && cloudData.lastUpdated > systemData.lastUpdated)) {
-                        systemData = cloudData;
+                    // evaluations 用 merge 策略：合并本地和云端，保留双方所有评价记录
+                    const cloudEval = cloudData.evaluations || {};
+                    const localEval = systemData.evaluations || {};
+                    // 遍历云端评价，逐人合并（保留更详细的记录）
+                    for (const empId in cloudEval) {
+                        const cloudRecords = cloudEval[empId];
+                        const localRecords = localEval[empId] || {};
+                        if (!localEval[empId]) {
+                            localEval[empId] = cloudRecords;
+                        } else {
+                            // 合并每条评价（以各自的 lastUpdated 判断，或直接取并集）
+                            for (const targetId in cloudRecords) {
+                                if (!(targetId in localRecords)) {
+                                    localRecords[empId][targetId] = cloudRecords[targetId];
+                                }
+                            }
+                        }
                     }
-                    // employees 始终以本地 localStorage 为准
+                    systemData.evaluations = localEval;
+                    // employees 始终以本地 localStorage 为准（管理端是数据源头）
                     const localEmp = JSON.parse(localStorage.getItem('employees_v2_data') || 'null');
                     if (localEmp && localEmp.length > 0) {
                         systemData.employees = localEmp;
                     }
+                    systemData.lastUpdated = new Date().toISOString();
                     localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
                     if (cloudData.adminPasswordHash && !localStorage.getItem(ADMIN_PASSWORD_KEY)) {
                         localStorage.setItem(ADMIN_PASSWORD_KEY, cloudData.adminPasswordHash);
@@ -466,7 +470,7 @@
             showToast('数据保存到云端失败，请检查网络', 'warning');
         }
     }
-    // 强制从云端刷新（覆盖本地）
+    // 强制从云端刷新（merge 合并评价数据，不覆盖本地已有的）
     async function forceSyncFromCloud() {
         try {
             const url = GITHUB_RAW_URL + '?t=' + Date.now();
@@ -474,15 +478,31 @@
             if (!res.ok) { showToast('云端同步失败', 'error'); return false; }
             const cloudData = await res.json();
             if (cloudData.evaluations !== undefined) {
-                systemData = cloudData;
+                // evaluations 用 merge 策略：合并云端评价到本地
+                const cloudEval = cloudData.evaluations || {};
+                const localEval = systemData.evaluations || {};
+                for (const empId in cloudEval) {
+                    const cloudRecords = cloudEval[empId];
+                    if (!localEval[empId]) {
+                        localEval[empId] = cloudRecords;
+                    } else {
+                        for (const targetId in cloudRecords) {
+                            if (!(targetId in localEval[empId])) {
+                                localEval[empId][targetId] = cloudRecords[targetId];
+                            }
+                        }
+                    }
+                }
+                systemData.evaluations = localEval;
                 // employees 同步
-                if (systemData.employees && systemData.employees.length > 0) {
-                    EMPLOYEES = systemData.employees;
+                if (cloudData.employees && cloudData.employees.length > 0) {
+                    EMPLOYEES = cloudData.employees;
                     localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
                 }
+                systemData.lastUpdated = new Date().toISOString();
                 localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
-                if (systemData.adminPasswordHash && !localStorage.getItem(ADMIN_PASSWORD_KEY)) {
-                    localStorage.setItem(ADMIN_PASSWORD_KEY, systemData.adminPasswordHash);
+                if (cloudData.adminPasswordHash && !localStorage.getItem(ADMIN_PASSWORD_KEY)) {
+                    localStorage.setItem(ADMIN_PASSWORD_KEY, cloudData.adminPasswordHash);
                 }
                 showToast('已从云端同步最新数据', 'success');
                 return true;
@@ -902,7 +922,7 @@
         const trimmed = val.trim();
         if (field === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) { showToast('请输入有效的邮箱地址', 'error'); return; }
         emp[field] = trimmed;
-        saveEmployeeData(); initEmployeesTable();
+        saveEmployeeData(); pushToCloud(); initEmployeesTable();
         showToast('已更新', 'success');
     }
 
@@ -921,7 +941,7 @@
         if (!email) { showToast('请输入邮箱地址', 'error'); return; }
         if (EMPLOYEES.some(e => e.email === email)) { showToast('邮箱已被使用', 'error'); return; }
         EMPLOYEES.push({ id: String(EMPLOYEES.length + 1), name, email, role });
-        saveEmployeeData(); closeAddEmployeeModal(); initEmployeesTable();
+        saveEmployeeData(); pushToCloud(); closeAddEmployeeModal(); initEmployeesTable();
         showToast('已添加新员工：' + name, 'success');
     }
 
@@ -929,7 +949,7 @@
         const emp = EMPLOYEES.find(e => e.id === empId);
         if (!emp || emp.role === 'director') return;
         EMPLOYEES.splice(EMPLOYEES.findIndex(e => e.id === empId), 1);
-        saveEmployeeData(); initEmployeesTable();
+        saveEmployeeData(); pushToCloud(); initEmployeesTable();
         showToast('已删除：' + emp.name, 'success');
     }
 
