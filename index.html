@@ -177,7 +177,7 @@
     }
 
     function loadEmployees() {
-        // 优先级：localStorage > 云端（fetchJSONBin中处理） > DEFAULT_EMPLOYEES
+        // 优先级：localStorage > 云端（fetchCloudData中处理） > DEFAULT_EMPLOYEES
         const saved = localStorage.getItem('employees_v2_data');
         if (saved) {
             try {
@@ -315,12 +315,12 @@
             const decoded = JSON.parse(decodeURIComponent(escape(atob(token))));
             if (!decoded.id || !decoded.name || !decoded.role) throw new Error('缺少必要字段');
             if (decoded.role === 'director') throw new Error('请使用管理员页面登录');
-            // 先用本地 employees 校验，不等云端（避免 JSONBin 慢导致超时）
+            // 先用本地 employees 校验，不等云端（避免网络慢导致超时）
             let emp = EMPLOYEES.find(e => e.id === decoded.id);
             if (!emp) {
                 // 本地没有，尝试从云端拉
                 document.getElementById('loginWaiting').innerHTML = '<div class="spinner"></div> 正在从云端同步员工数据...';
-                await fetchJSONBin();
+                await fetchCloudData();
                 emp = EMPLOYEES.find(e => e.id === decoded.id);
             }
             if (!emp) {
@@ -338,7 +338,7 @@
             if (!systemData) systemData = JSON.parse(localStorage.getItem(STATE_KEY) || 'null') || { evaluations: {}, lastUpdated: new Date().toISOString() };
             showMainInterface();
             // 登录成功后，后台异步同步云端数据
-            fetchJSONBin();
+            fetchCloudData();
         } catch (e) {
             console.error('登录链接解析失败:', e);
             showLoginInterface();
