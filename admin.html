@@ -437,20 +437,21 @@
     }
     async function pushToCloud() {
         try {
-            // 先获取文件当前 sha
+            // 先获取文件当前 sha（文件不存在时 sha 为 null，GitHub API 会自动创建）
             const metaRes = await fetch(GITHUB_API_URL, { headers: { 'Authorization': 'token ' + GITHUB_TOKEN } });
-            let sha = _githubFileSha;
+            let sha = null;
             if (metaRes.ok) {
                 const meta = await metaRes.json();
                 sha = meta.sha;
                 _githubFileSha = sha;
             }
-            if (!sha) { showToast('云端同步失败: 无法获取文件SHA', 'warning'); return; }
             const content = btoa(unescape(encodeURIComponent(JSON.stringify(systemData, null, 2))));
+            const bodyData = { message: 'update eval data', content };
+            if (sha) bodyData.sha = sha; // 有 sha 说明文件已存在，传入以更新
             const res = await fetch(GITHUB_API_URL, {
                 method: 'PUT',
                 headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: 'update eval data', content, sha })
+                body: JSON.stringify(bodyData)
             });
             if (res.ok) {
                 const j = await res.json();
