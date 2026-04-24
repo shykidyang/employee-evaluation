@@ -7,11 +7,11 @@
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); min-height: 100vh; font-size: 13px; }
-        .container { max-width: 1400px; margin: 0 auto; padding: 12px; }
-        .login-container { max-width: 420px; margin: 80px auto; animation: fadeIn 0.5s; }
+        body { font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; font-size: 13px; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 6px; }
+        .login-container { max-width: 420px; margin: 60px auto; animation: fadeIn 0.5s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .card { background: white; border-radius: 14px; padding: 28px 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+        .card { background: white; border-radius: 14px; padding: 28px 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.15); }
         h1, h2, h3 { color: #2c3e50; font-size: 15px; }
         h1 { text-align: center; margin-bottom: 6px; font-size: 20px; }
         .subtitle { text-align: center; color: #6b7280; margin-bottom: 20px; font-size: 12px; }
@@ -19,7 +19,7 @@
         .form-group label { display: block; color: #374151; font-weight: 500; margin-bottom: 5px; font-size: 12px; }
         .form-control { width: 100%; padding: 10px 12px; border: 1.5px solid #e0e6ed; border-radius: 8px; font-size: 13px; transition: all 0.3s; }
         .form-control:focus { border-color: #667eea; outline: none; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
-        .btn { width: 100%; padding: 10px 16px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .btn { padding: 9px 18px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s; }
         .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4); }
         .btn-success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
@@ -35,41 +35,41 @@
         .alert-success { background: #d1fae5; color: #065f46; border-left: 4px solid #10b981; }
         .alert-error { background: #fee2e2; color: #991b1b; border-left: 4px solid #ef4444; }
         .alert-info { background: #dbeafe; color: #1e40af; border-left: 4px solid #3b82f6; }
-        .header { background: white; border-radius: 12px; padding: 14px 20px; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .header { background: white; border-radius: 12px; padding: 8px 14px; margin-bottom: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
         .user-info { display: flex; align-items: center; gap: 10px; }
-        .user-avatar { width: 38px; height: 38px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; }
-        .user-details h3 { margin: 0; font-size: 15px; }
-        .user-details p { margin: 2px 0 0; color: #6b7280; font-size: 11px; }
-        .nav-tabs { display: flex; gap: 4px; background: white; padding: 6px; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); flex-wrap: wrap; }
+        .user-avatar { width: 30px; height: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; }
+        .user-details h3 { margin: 0; font-size: 14px; }
+        .user-details p { margin: 1px 0 0; color: #6b7280; font-size: 10px; }
+        .nav-tabs { display: flex; gap: 4px; background: white; padding: 6px; border-radius: 10px; margin-bottom: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); flex-wrap: wrap; }
         .nav-tab { padding: 8px 14px; border-radius: 6px; cursor: pointer; transition: all 0.3s; font-weight: 500; border: none; background: transparent; color: #6b7280; font-size: 12px; }
         .nav-tab:hover { background: #f3f4f6; }
         .nav-tab.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-        .main-content { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); min-height: 500px; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
-        .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px; border-radius: 10px; text-align: center; }
+        .main-content { background: white; border-radius: 12px; padding: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); min-height: 400px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; margin-bottom: 14px; }
+        .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 8px; border-radius: 8px; text-align: center; }
         .stat-card.success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
         .stat-card.warning { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
         .stat-card.danger { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
-        .stat-value { font-size: 28px; font-weight: bold; }
-        .stat-label { font-size: 12px; opacity: 0.9; }
-        table { width: 100%; border-collapse: collapse; margin-top: 14px; }
-        th { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 12px; text-align: left; font-weight: 600; font-size: 12px; }
-        td { padding: 9px 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
+        .stat-value { font-size: 20px; font-weight: bold; }
+        .stat-label { font-size: 10px; opacity: 0.9; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 10px; text-align: left; font-weight: 600; font-size: 12px; }
+        td { padding: 7px 10px; border-bottom: 1px solid #e5e7eb; font-size: 12px; }
         tr:hover { background: #f9fafb; }
-        .admin-panel { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 10px; padding: 14px; margin-bottom: 14px; border-left: 3px solid #f59e0b; }
-        .admin-panel h4 { color: #92400e; margin-bottom: 10px; font-size: 13px; }
-        .export-section { background: #f9fafb; border-radius: 10px; padding: 14px; margin-top: 20px; }
-        .export-section h4 { margin-bottom: 10px; color: #374151; font-size: 13px; }
-        .action-buttons { display: flex; gap: 8px; margin-top: 14px; }
-        .action-buttons .btn { flex: 1; padding: 8px 12px; font-size: 12px; }
+        .admin-panel { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; border-left: 3px solid #f59e0b; }
+        .admin-panel h4 { color: #92400e; margin-bottom: 6px; font-size: 12px; }
+        .export-section { background: #f9fafb; border-radius: 8px; padding: 8px 12px; margin-top: 10px; }
+        .export-section h4 { margin-bottom: 6px; color: #374151; font-size: 12px; }
+        .action-buttons { display: flex; gap: 8px; margin-top: 10px; }
+        .action-buttons .btn { flex: 1; padding: 9px 12px; font-size: 12px; }
         .action-buttons .btn-sm { padding: 6px 12px; font-size: 12px; width: auto; }
         .hidden { display: none !important; }
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-        .modal-content { background: white; border-radius: 12px; padding: 20px; max-width: 560px; width: 90%; max-height: 80vh; overflow-y: auto; animation: scaleIn 0.3s; }
+        .modal-content { background: white; border-radius: 12px; padding: 16px; max-width: 560px; width: 90%; max-height: 80vh; overflow-y: auto; animation: scaleIn 0.3s; }
         @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
         .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #6b7280; }
-        .checkbox-item { display: flex; align-items: center; padding: 8px 10px; border-bottom: 1px solid #e5e7eb; gap: 8px; font-size: 13px; }
+        .checkbox-item { display: flex; align-items: center; padding: 6px 10px; border-bottom: 1px solid #e5e7eb; gap: 8px; font-size: 12px; }
         .checkbox-item:last-child { border-bottom: none; }
         .checkbox-item input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; }
         .checkbox-label { flex: 1; }
@@ -88,7 +88,7 @@
         .toast-info { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
         @keyframes slideIn { from { opacity: 0; transform: translateX(100px); } to { opacity: 1; transform: translateX(0); } }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
-        .admin-badge { display: inline-flex; align-items: center; gap: 4px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 4px 10px; border-radius: 14px; font-size: 11px; margin-bottom: 14px; }
+        .admin-badge { display: inline-flex; align-items: center; gap: 4px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 3px 10px; border-radius: 14px; font-size: 11px; margin-bottom: 14px; }
         .eval-item { background: #f9fafb; border-radius: 6px; padding: 5px 10px; margin-bottom: 3px; display: flex; justify-content: space-between; align-items: center; }
         .eval-item-info { display: flex; align-items: center; gap: 6px; }
         .eval-item-avatar { width: 24px; height: 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 11px; }
@@ -112,10 +112,10 @@
         .result-summary-item { background: #f3f4f6; border-radius: 6px; padding: 8px 10px; text-align: center; }
         .result-summary-item .val { font-size: 16px; font-weight: bold; color: #374151; }
         .result-summary-item .lbl { font-size: 10px; color: #9ca3af; margin-top: 2px; }
-        .detail-card { background: #f9fafb; border-radius: 8px; padding: 12px; margin-bottom: 8px; border: 1px solid #e5e7eb; }
-        .detail-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .detail-card-name { font-weight: 700; font-size: 13px; color: #1f2937; }
-        .detail-card-score { font-size: 18px; font-weight: 800; color: #667eea; }
+        .detail-card { background: #f9fafb; border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; border: 1px solid #e5e7eb; }
+        .detail-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .detail-card-name { font-weight: 700; font-size: 12px; color: #1f2937; }
+        .detail-card-score { font-size: 16px; font-weight: 800; color: #667eea; }
         .detail-card-rank { font-size: 11px; background: #e0e7ff; color: #4f46e5; padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
         .calc-process { background: white; border: 1px dashed #d1d5db; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; font-size: 11px; font-family: 'Consolas', monospace; color: #4b5563; line-height: 1.8; }
         .calc-process .calc-label { color: #9ca3af; }
@@ -149,14 +149,14 @@
                         <label>管理密码</label>
                         <input type="password" id="adminPassword" class="form-control" placeholder="请输入管理密码" onkeydown="if(event.key==='Enter')adminLogin()">
                     </div>
-                    <button class="btn btn-primary" onclick="adminLogin()">&#128274; 登录管理后台</button>
+                    <button class="btn btn-primary" style="width:100%;" onclick="adminLogin()">&#128274; 登录管理后台</button>
                     <div class="alert alert-info" style="margin-top:14px;font-size:12px;">&#128161; 首次使用无需密码，直接登录后请设置密码</div>
                 </div>
                 <div id="setupPasswordForm" class="hidden">
                     <div class="alert alert-warning">&#9888; 首次登录，请设置管理密码</div>
                     <div class="form-group"><label>设置密码（至少6位）</label><input type="password" id="newPassword" class="form-control" placeholder="请设置管理密码"></div>
                     <div class="form-group"><label>确认密码</label><input type="password" id="confirmPassword" class="form-control" placeholder="请再次输入密码" onkeydown="if(event.key==='Enter')setupPassword()"></div>
-                    <button class="btn btn-primary" onclick="setupPassword()">&#128273; 设置密码并登录</button>
+                    <button class="btn btn-primary" style="width:100%;" onclick="setupPassword()">&#128273; 设置密码并登录</button>
                 </div>
                 <div id="loginError" class="hidden"><div class="alert alert-error" id="errorMessage"></div></div>
             </div>
@@ -185,17 +185,17 @@
         <div class="main-content">
             <!-- 评价进度 -->
             <div id="statusTab" class="tab-content">
-                <h3>&#128202; 评价完成情况</h3>
-                <p style="color:#6b7280;margin-bottom:14px;font-size:12px;">实时查看所有人员的评价进度</p>
+                <h3 style="font-size:14px;margin-bottom:4px;">&#128202; 评价完成情况</h3>
+                <p style="color:#6b7280;margin-bottom:10px;font-size:11px;">实时查看所有人员的评价进度，点击展开查看评价详情</p>
                 <div class="stats-grid">
                     <div class="stat-card"><div class="stat-value" id="evalTotalCount">0</div><div class="stat-label">总人数</div></div>
                     <div class="stat-card success"><div class="stat-value" id="evalCompletedCount">0</div><div class="stat-label">已完成</div></div>
                     <div class="stat-card danger"><div class="stat-value" id="evalPendingCount">0</div><div class="stat-label">未完成</div></div>
                     <div class="stat-card warning"><div class="stat-value" id="totalEvaluations">0</div><div class="stat-label">总评价记录</div></div>
                 </div>
-                <h4 style="margin:14px 0 10px;font-size:13px;">&#128203; 详细进度</h4>
+                <h4 style="margin:10px 0 8px;font-size:12px;">&#128203; 详细进度</h4>
                 <div id="progressList"></div>
-                <div class="action-buttons" style="margin-top:14px;"><button class="btn btn-secondary btn-sm" onclick="async function(){if(await forceSyncFromCloud())initStatusPage();}">&#128260; 刷新进度</button></div>
+                <div class="action-buttons"><button class="btn btn-secondary btn-sm" onclick="async function(){if(await forceSyncFromCloud())initStatusPage();}">&#128260; 刷新进度</button></div>
             </div>
             <!-- 领导评分 -->
             <div id="evaluateTab" class="tab-content hidden">
@@ -214,7 +214,7 @@
                     <div class="eval-stat low"><div class="eval-stat-val" id="adminStat60">0</div><div class="eval-stat-lbl">60分（合格）</div></div>
                 </div>
                 <h3 style="font-size:14px;margin-bottom:6px;">&#128172; 请为每位员工评分</h3>
-                <p style="color:#6b7280;margin-bottom:14px;font-size:12px;">点击下方按钮选择评分档次</p>
+                <p style="color:#6b7280;margin-bottom:10px;font-size:11px;">点击下方按钮选择评分档次</p>
                 <div id="adminEvalList"></div>
                 <div class="action-buttons" style="margin-top:10px;">
                     <button class="btn btn-success" onclick="submitAdminEvaluations()">&#9989; 提交评价</button>
@@ -224,30 +224,30 @@
             <!-- 发送链接 -->
             <div id="sendlinkTab" class="tab-content hidden">
                 <div class="rules-box"><h4>&#128231; 发送登录链接</h4><ul><li>勾选需要发送链接的员工（管理员通过本页面直接登录，无需发送）</li><li>系统将通过 EmailJS 发送含登录令牌的邮件</li><li>员工点击邮件中的链接即可自动登录</li></ul></div>
-                <div style="margin-bottom:12px;">
-                    <label style="display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:4px;">&#128236; 邮件标题</label>
-                    <input type="text" id="emailSubjectInput" placeholder="请输入邮件标题，如：部门内部互评系统 - 登录链接" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;box-sizing:border-box;" />
+                <div style="margin-bottom:8px;">
+                    <label style="display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;">&#128236; 邮件标题</label>
+                    <input type="text" id="emailSubjectInput" placeholder="请输入邮件标题，如：部门内部互评系统 - 登录链接" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;box-sizing:border-box;" />
                 </div>
-                <div style="max-height:400px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:15px;"><div id="sendLinkList"></div></div>
+                <div style="max-height:400px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:10px;"><div id="sendLinkList"></div></div>
                 <div class="action-buttons"><button class="btn btn-primary btn-sm" onclick="sendLoginLinks()">&#128231; 发送选中链接</button><button class="btn btn-secondary btn-sm" onclick="selectAllEmployees()">全选</button><button class="btn btn-secondary btn-sm" onclick="deselectAllEmployees()">取消全选</button></div>
             </div>
             <!-- 数据管理 -->
             <div id="dataTab" class="tab-content hidden">
-                <h3>&#129504; 测试数据管理</h3>
-                <p style="color:#6b7280;margin-bottom:14px;font-size:12px;">一键填入或清空模拟评测数据，便于测试系统功能</p>
+                <h3 style="font-size:14px;margin-bottom:4px;">&#129504; 测试数据管理</h3>
+                <p style="color:#6b7280;margin-bottom:10px;font-size:11px;">一键填入或清空模拟评测数据，便于测试系统功能</p>
                 <div class="admin-panel"><div class="action-buttons"><button class="btn btn-warning btn-sm" onclick="generateTestData()">&#128221; 填入模拟数据</button><button class="btn btn-danger btn-sm" onclick="clearAllEvaluations()">&#128465; 清空所有评价</button><button class="btn btn-danger btn-sm" onclick="resetAllData()">&#128260; 重置系统</button></div></div>
                 <div class="export-section"><h4>&#128229; 导出评价数据</h4><div class="action-buttons"><button class="btn btn-primary" onclick="exportFullExcel()">&#128202; 导出汇总表</button><button class="btn btn-secondary" onclick="exportDetailExcel()">&#128203; 导出明细表</button></div></div>
             </div>
             <!-- 员工管理 -->
             <div id="employeesTab" class="tab-content hidden">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;"><h3 style="margin:0;">&#128101; 员工管理</h3><button class="btn btn-primary btn-sm" onclick="showAddEmployeeModal()">&#10133; 添加员工</button></div>
-                <p style="color:#6b7280;margin-bottom:10px;font-size:12px;">共 <span id="empCount">0</span> 名员工（点击姓名/邮箱可编辑）</p>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><h3 style="margin:0;font-size:14px;">&#128101; 员工管理</h3><button class="btn btn-primary btn-sm" onclick="showAddEmployeeModal()">&#10133; 添加员工</button></div>
+                <p style="color:#6b7280;margin-bottom:8px;font-size:11px;">共 <span id="empCount">0</span> 名员工（点击姓名/邮箱可编辑）</p>
                 <div style="max-height:500px;overflow-y:auto;"><table><thead><tr><th style="width:50px;">序号</th><th>姓名</th><th>邮箱</th><th style="width:80px;">操作</th></tr></thead><tbody id="employeesTable"></tbody></table></div>
             </div>
             <!-- 评价结果 -->
             <div id="resultsTab" class="tab-content hidden">
-                <h3>&#127942; 最终评价得分结果</h3>
-                <p style="color:#6b7280;margin-bottom:10px;font-size:12px;">综合评分 = 正职领导评价(30%) + 副职领导评价(10%) + 员工互评平均(60%)</p>
+                <h3 style="font-size:14px;margin-bottom:4px;">&#127942; 最终评价得分结果</h3>
+                <p style="color:#6b7280;margin-bottom:10px;font-size:11px;">综合评分 = 正职领导评价(30%) + 副职领导评价(10%) + 员工互评平均(60%)</p>
                 <div class="result-summary" id="resultSummary"></div>
                 <div class="result-view-toggle">
                     <button class="result-view-btn active" onclick="switchResultView('summary')">&#128202; 汇总视图</button>
@@ -256,7 +256,7 @@
                 </div>
                 <div id="resultSummaryView">
                     <div style="max-height:600px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;">
-                        <table style="font-size:13px;"><thead><tr style="background:#f3f4f6;position:sticky;top:0;"><th style="padding:10px 8px;">排名</th><th style="padding:10px 8px;">姓名</th><th style="padding:10px 8px;">正职评价</th><th style="padding:10px 8px;">副职评价</th><th style="padding:10px 8px;">员工互评</th><th style="padding:10px 8px;">被评次数</th><th style="padding:10px 8px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;">综合得分</th></tr></thead><tbody id="adminResultsTable"></tbody></table>
+                        <table style="font-size:12px;"><thead><tr style="background:#f3f4f6;position:sticky;top:0;"><th style="padding:8px 6px;">排名</th><th style="padding:8px 6px;">姓名</th><th style="padding:8px 6px;">正职评价</th><th style="padding:8px 6px;">副职评价</th><th style="padding:8px 6px;">员工互评</th><th style="padding:8px 6px;">被评次数</th><th style="padding:8px 6px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;">综合得分</th></tr></thead><tbody id="adminResultsTable"></tbody></table>
                     </div>
                 </div>
                 <div id="resultDetailView" class="hidden"></div>
@@ -1016,13 +1016,13 @@
             const roleTag = r.role === 'deputy' ? ' <span style="color:#f59e0b;font-size:10px;">[副职]</span>' : '';
             const bg = i === 0 ? 'background:#fef9c3;' : i === 1 ? 'background:#f9fafb;' : i === 2 ? 'background:#fdf2f8;' : '';
             return '<tr style="border-bottom:1px solid #e5e7eb;' + bg + '">' +
-                '<td style="padding:10px 8px;text-align:center;"><span style="background:' + (rc[i]||'#9ca3af') + ';color:white;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:bold;">' + r.rank + '</span></td>' +
-                '<td style="padding:10px 8px;font-weight:600;">' + r.name + roleTag + '</td>' +
-                '<td style="padding:10px 8px;text-align:center;color:#4f46e5;">' + (r.directorAvg > 0 ? r.directorAvg.toFixed(1) : '<span style="color:#ccc">-</span>') + '</td>' +
-                '<td style="padding:10px 8px;text-align:center;color:#10b981;">' + (r.deputyAvg > 0 ? r.deputyAvg.toFixed(1) : '<span style="color:#ccc">-</span>') + '</td>' +
-                '<td style="padding:10px 8px;text-align:center;color:#f59e0b;">' + (r.staffAvg > 0 ? r.staffAvg.toFixed(1) : '<span style="color:#ccc">-</span>') + '</td>' +
-                '<td style="padding:10px 8px;text-align:center;color:#6b7280;">' + r.evalCount + '</td>' +
-                '<td style="padding:10px 8px;text-align:center;font-weight:bold;font-size:16px;color:#667eea;">' + (r.finalScore > 0 ? r.finalScore.toFixed(2) : '-') + '</td></tr>';
+                '<td style="padding:8px 6px;text-align:center;"><span style="background:' + (rc[i]||'#9ca3af') + ';color:white;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:bold;">' + r.rank + '</span></td>' +
+                '<td style="padding:8px 6px;font-weight:600;font-size:12px;">' + r.name + roleTag + '</td>' +
+                '<td style="padding:8px 6px;text-align:center;color:#4f46e5;font-size:12px;">' + (r.directorAvg > 0 ? r.directorAvg.toFixed(1) : '<span style="color:#ccc">-</span>') + '</td>' +
+                '<td style="padding:8px 6px;text-align:center;color:#10b981;font-size:12px;">' + (r.deputyAvg > 0 ? r.deputyAvg.toFixed(1) : '<span style="color:#ccc">-</span>') + '</td>' +
+                '<td style="padding:8px 6px;text-align:center;color:#f59e0b;font-size:12px;">' + (r.staffAvg > 0 ? r.staffAvg.toFixed(1) : '<span style="color:#ccc">-</span>') + '</td>' +
+                '<td style="padding:8px 6px;text-align:center;color:#6b7280;font-size:12px;">' + r.evalCount + '</td>' +
+                '<td style="padding:8px 6px;text-align:center;font-weight:bold;font-size:14px;color:#667eea;">' + (r.finalScore > 0 ? r.finalScore.toFixed(2) : '-') + '</td></tr>';
         }).join('');
 
         // 如果当前在详细视图，也要刷新
