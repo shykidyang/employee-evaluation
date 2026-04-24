@@ -295,11 +295,13 @@
     const ADMIN_NAME = '杨洪均';
     const ADMIN_PASSWORD_KEY = 'eval_admin_pwd_v2';
 
-    // JSONBin 云端同步配置
-    const JSONBIN_ID = '69e9cde0856a68218963330c';
-    const JSONBIN_API_KEY = '$2a$10$3x6ustM943wc8LFtNcb/I.L.acCynFMMqwi627g4miJe3ssd7mh0a';
-    const JSONBIN_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_ID + '/latest';
-    const JSONBIN_UPDATE_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_ID;
+    // GitHub Contents API 云端同步配置
+    const GITHUB_TOKEN = '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';
+    const GITHUB_REPO = 'shykidyang/employee-evaluation';
+    const GITHUB_FILE = 'eval-data.json';
+    const GITHUB_API_URL = 'https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_FILE;
+    const GITHUB_RAW_URL = 'https://raw.githubusercontent.com/' + GITHUB_REPO + '/main/' + GITHUB_FILE;
+    let _githubFileSha = null;
 
     const DEFAULT_EMPLOYEES = [
         { id: '1', name: '杨洪均', role: 'director', email: 'yanghongjun.sc@chinatelecom.cn' },
@@ -345,13 +347,13 @@
         loadEmployees();
         // 先加载本地数据，再异步拉云端并确保 employees 上传
         loadState().then(() => {
-            // fetchJSONBin 完成后，确保 systemData 包含最新 employees 并上传
+            // 云端数据拉取完成后，确保 systemData 包含最新 employees 并上传
             if (EMPLOYEES.length > 0) {
                 systemData.employees = EMPLOYEES;
                 systemData.lastUpdated = new Date().toISOString();
                 localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
                 // 立即上传（不等防抖）
-                pushToJSONBin();
+                pushToCloud();
             }
         });
         if (sessionStorage.getItem('admin_logged_in') === 'true') { showMainInterface(); return; }
@@ -365,7 +367,7 @@
         document.getElementById('loginPage').classList.remove('hidden');
         document.getElementById('mainPage').classList.add('hidden');
 
-        // 延迟检查：等 fetchJSONBin 拉到云端密码后再更新登录表单状态
+        // 延迟检查：等云端数据拉取完成后再更新登录表单状态
         setTimeout(() => {
             if (localStorage.getItem(ADMIN_PASSWORD_KEY) && document.getElementById('setupPasswordForm') && !document.getElementById('setupPasswordForm').classList.contains('hidden')) {
                 document.getElementById('setupPasswordForm').classList.add('hidden');
@@ -387,31 +389,30 @@
         systemData.lastUpdated = new Date().toISOString();
         localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
         if (saveTimer) clearTimeout(saveTimer);
-        saveTimer = setTimeout(pushToJSONBin, 1000);
+        saveTimer = setTimeout(pushToCloud, 1000);
     }
     function loadState() {
         const saved = localStorage.getItem(STATE_KEY);
         systemData = saved ? JSON.parse(saved) : { evaluations: {}, lastUpdated: new Date().toISOString() };
-        return fetchJSONBin(); // 返回 Promise
+        return fetchCloudData(); // 返回 Promise
     }
-    async function fetchJSONBin() {
-        const headers = { 'Content-Type': 'application/json' };
-        if (JSONBIN_API_KEY) headers['X-Master-Key'] = JSONBIN_API_KEY;
+    async function fetchCloudData() {
+        // raw URL 读取，加时间戳避免 CDN 缓存
+        const url = GITHUB_RAW_URL + '?t=' + Date.now();
         for (let retry = 0; retry < 3; retry++) {
             try {
                 const controller = new AbortController();
                 const timer = setTimeout(() => controller.abort(), 15000);
-                const res = await fetch(JSONBIN_URL, { headers, signal: controller.signal });
+                const res = await fetch(url, { signal: controller.signal });
                 clearTimeout(timer);
                 if (!res.ok) { if (retry < 2) await new Promise(r => setTimeout(r, 500)); continue; }
-                const json = await res.json();
-                if (json.record && json.record.evaluations) {
-                    const cloudData = json.record;
-                    // 合并云端数据，但保留本地已有的 employees 和 adminPasswordHash
-                    if (!systemData.lastUpdated || cloudData.lastUpdated > systemData.lastUpdated) {
+                const cloudData = await res.json();
+                if (cloudData.evaluations !== undefined) {
+                    // 合并云端数据，但 employees 始终以本地为准（管理端是数据源头）
+                    if (!systemData.lastUpdated || (cloudData.lastUpdated && cloudData.lastUpdated > systemData.lastUpdated)) {
                         systemData = cloudData;
                     }
-                    // employees 始终以本地为准（管理端是数据源头）
+                    // employees 始终以本地 localStorage 为准
                     const localEmp = JSON.parse(localStorage.getItem('employees_v2_data') || 'null');
                     if (localEmp && localEmp.length > 0) {
                         systemData.employees = localEmp;
@@ -426,56 +427,61 @@
                 if (retry < 2) await new Promise(r => setTimeout(r, 500 * (retry + 1)));
             }
         }
-        console.warn('fetchJSONBin: 3次重试均失败，使用本地数据');
+        console.warn('fetchCloudData: 3次重试均失败，使用本地数据');
     }
     function saveState() {
         systemData.lastUpdated = new Date().toISOString();
         localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
         if (saveTimer) clearTimeout(saveTimer);
-        saveTimer = setTimeout(pushToJSONBin, 1000);
+        saveTimer = setTimeout(pushToCloud, 1000);
     }
-    async function pushToJSONBin() {
-        if (!JSONBIN_API_KEY) return;
-        const headers = { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY };
-        // 乐观写入：直接上传本地最新数据，带重试
-        for (let retry = 0; retry < 3; retry++) {
-            try {
-                const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), 20000);
-                const res = await fetch(JSONBIN_UPDATE_URL, {
-                    method: 'PUT',
-                    headers,
-                    signal: controller.signal,
-                    body: JSON.stringify(systemData)
-                });
-                clearTimeout(timer);
-                if (res.ok) return;
-                await new Promise(r => setTimeout(r, 1000 * (retry + 1)));
-            } catch (netErr) {
-                if (retry === 2) { showToast('数据保存到云端失败，已存本地', 'warning'); return; }
-                await new Promise(r => setTimeout(r, 1000 * (retry + 1)));
+    async function pushToCloud() {
+        try {
+            // 先获取文件当前 sha
+            const metaRes = await fetch(GITHUB_API_URL, { headers: { 'Authorization': 'token ' + GITHUB_TOKEN } });
+            let sha = _githubFileSha;
+            if (metaRes.ok) {
+                const meta = await metaRes.json();
+                sha = meta.sha;
+                _githubFileSha = sha;
             }
+            if (!sha) { showToast('云端同步失败: 无法获取文件SHA', 'warning'); return; }
+            const content = btoa(unescape(encodeURIComponent(JSON.stringify(systemData, null, 2))));
+            const res = await fetch(GITHUB_API_URL, {
+                method: 'PUT',
+                headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: 'update eval data', content, sha })
+            });
+            if (res.ok) {
+                const j = await res.json();
+                _githubFileSha = j.content.sha;
+            } else {
+                const err = await res.text();
+                console.warn('pushToCloud 失败:', err);
+                showToast('数据保存到云端失败，已存本地', 'warning');
+            }
+        } catch (e) {
+            console.warn('pushToCloud 异常:', e.message);
+            showToast('数据保存到云端失败，请检查网络', 'warning');
         }
     }
     // 强制从云端刷新（覆盖本地）
     async function forceSyncFromCloud() {
         try {
-            const headers = { 'Content-Type': 'application/json' };
-            if (JSONBIN_API_KEY) headers['X-Master-Key'] = JSONBIN_API_KEY;
-            const res = await fetch(JSONBIN_URL, { headers });
+            const url = GITHUB_RAW_URL + '?t=' + Date.now();
+            const res = await fetch(url);
             if (!res.ok) { showToast('云端同步失败', 'error'); return false; }
-            const json = await res.json();
-            if (json.record && json.record.evaluations) {
-                systemData = json.record;
-                localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
-                // 同步管理员密码
-                if (systemData.adminPasswordHash && !localStorage.getItem(ADMIN_PASSWORD_KEY)) {
-                    localStorage.setItem(ADMIN_PASSWORD_KEY, systemData.adminPasswordHash);
-                }
-                // 同步员工列表
+            const cloudData = await res.json();
+            if (cloudData.evaluations !== undefined) {
+                systemData = cloudData;
+                // employees 同步
                 if (systemData.employees && systemData.employees.length > 0) {
                     EMPLOYEES = systemData.employees;
                     localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
+                }
+                localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
+                if (systemData.adminPasswordHash && !localStorage.getItem(ADMIN_PASSWORD_KEY)) {
+                    localStorage.setItem(ADMIN_PASSWORD_KEY, systemData.adminPasswordHash);
                 }
                 showToast('已从云端同步最新数据', 'success');
                 return true;
@@ -497,7 +503,7 @@
         // 同步密码到云端
         systemData.adminPasswordHash = hash;
         if (saveTimer) clearTimeout(saveTimer);
-        saveTimer = setTimeout(pushToJSONBin, 500);
+        saveTimer = setTimeout(pushToCloud, 500);
         sessionStorage.setItem('admin_logged_in', 'true');
         showToast('密码设置成功，已同步到云端，可跨设备登录', 'success');
         showMainInterface();
@@ -529,7 +535,7 @@
         // 同步密码到云端
         systemData.adminPasswordHash = hash;
         if (saveTimer) clearTimeout(saveTimer);
-        saveTimer = setTimeout(pushToJSONBin, 500);
+        saveTimer = setTimeout(pushToCloud, 500);
         showToast('密码修改成功，已同步到云端', 'success');
     }
 

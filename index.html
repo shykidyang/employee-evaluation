@@ -147,14 +147,17 @@
 
     const SCORE_RULES = { HIGH_MAX: 4, LOW_MIN: 2 };
     const STATE_KEY = 'evaluation_v2_data';
-    const JSONBIN_ID = '69e9cde0856a68218963330c';
-    const JSONBIN_API_KEY = '$2a$10$3x6ustM943wc8LFtNcb/I.L.acCynFMMqwi627g4miJe3ssd7mh0a';
-    const JSONBIN_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_ID + '/latest';
-    const JSONBIN_UPDATE_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_ID;
+    // GitHub Contents API 作为云端数据存储
+    const GITHUB_TOKEN = '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';
+    const GITHUB_REPO = 'shykidyang/employee-evaluation';
+    const GITHUB_FILE = 'eval-data.json';
+    const GITHUB_API_URL = 'https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_FILE;
+    const GITHUB_RAW_URL = 'https://raw.githubusercontent.com/' + GITHUB_REPO + '/main/' + GITHUB_FILE;
     let EMPLOYEES = [];
     let currentUser = null;
     let systemData = null;
     let saveTimer = null; // 防抖计时器
+    let _githubFileSha = null; // 用于 PUT 更新时需要传入 sha
 
     function init() {
         loadEmployees();
@@ -189,36 +192,36 @@
         const saved = localStorage.getItem(STATE_KEY);
         systemData = saved ? JSON.parse(saved) : { evaluations: {}, lastUpdated: new Date().toISOString() };
         // 异步从云端拉取最新数据，返回 Promise
-        return fetchJSONBin();
+        return fetchCloudData();
     }
-    async function fetchJSONBin() {
-        const headers = { 'Content-Type': 'application/json' };
-        if (JSONBIN_API_KEY) headers['X-Master-Key'] = JSONBIN_API_KEY;
+    async function fetchCloudData() {
+        // 用 raw URL 读取（无需认证，防止 CORS 问题），加随机参数避免 CDN 缓存
+        const url = GITHUB_RAW_URL + '?t=' + Date.now();
         for (let retry = 0; retry < 3; retry++) {
             try {
                 const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), 15000); // 15秒超时（JSONBin响应慢）
-                const res = await fetch(JSONBIN_URL, { headers, signal: controller.signal });
+                const timer = setTimeout(() => controller.abort(), 15000);
+                const res = await fetch(url, { signal: controller.signal });
                 clearTimeout(timer);
                 if (!res.ok) { if (retry < 2) await new Promise(r => setTimeout(r, 500)); continue; }
-                const json = await res.json();
-                if (json.record && json.record.evaluations) {
-                    const cloudData = json.record;
-                    if (!systemData.lastUpdated || cloudData.lastUpdated > systemData.lastUpdated) {
+                const cloudData = await res.json();
+                // 同步评价数据
+                if (cloudData.evaluations) {
+                    if (!systemData.lastUpdated || (cloudData.lastUpdated && cloudData.lastUpdated > systemData.lastUpdated)) {
                         systemData = cloudData;
                         localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
                     }
-                    // 从云端同步员工列表（管理端是数据源头，以云端为准）
-                    if (cloudData.employees && cloudData.employees.length > 0) {
-                        EMPLOYEES = cloudData.employees;
-                        localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
-                        // 如果当前登录用户的信息变了（如姓名修改），同步更新
-                        if (currentUser) {
-                            const updated = cloudData.employees.find(e => e.id === currentUser.id);
-                            if (updated) {
-                                currentUser = { id: updated.id, name: updated.name, role: updated.role, email: updated.email || '' };
-                                localStorage.setItem('current_user_v2', JSON.stringify(currentUser));
-                            }
+                }
+                // 从云端同步员工列表（管理端是数据源头，以云端为准）
+                if (cloudData.employees && cloudData.employees.length > 0) {
+                    EMPLOYEES = cloudData.employees;
+                    localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
+                    // 如果当前登录用户的信息变了（如姓名修改），同步更新
+                    if (currentUser) {
+                        const updated = cloudData.employees.find(e => e.id === currentUser.id);
+                        if (updated) {
+                            currentUser = { id: updated.id, name: updated.name, role: updated.role, email: updated.email || '' };
+                            localStorage.setItem('current_user_v2', JSON.stringify(currentUser));
                         }
                     }
                 }
@@ -227,35 +230,41 @@
                 if (retry < 2) await new Promise(r => setTimeout(r, 500 * (retry + 1)));
             }
         }
-        console.warn('fetchJSONBin: 3次重试均失败，使用本地数据');
+        console.warn('fetchCloudData: 3次重试均失败，使用本地数据');
     }
     function saveState() {
         systemData.lastUpdated = new Date().toISOString();
         localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
         // 防抖：1秒内只上传一次
         if (saveTimer) clearTimeout(saveTimer);
-        saveTimer = setTimeout(pushToJSONBin, 1000);
+        saveTimer = setTimeout(pushToCloud, 1000);
     }
-    async function pushToJSONBin() {
-        if (!JSONBIN_API_KEY) return;
-        const headers = { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY };
-        for (let retry = 0; retry < 3; retry++) {
-            try {
-                const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), 20000);
-                const res = await fetch(JSONBIN_UPDATE_URL, {
-                    method: 'PUT',
-                    headers,
-                    signal: controller.signal,
-                    body: JSON.stringify(systemData)
-                });
-                clearTimeout(timer);
-                if (res.ok) return;
-                await new Promise(r => setTimeout(r, 1000 * (retry + 1)));
-            } catch (netErr) {
-                if (retry === 2) { showToast('数据保存到云端失败，已存本地，请检查网络', 'warning'); return; }
-                await new Promise(r => setTimeout(r, 1000 * (retry + 1)));
+    async function pushToCloud() {
+        try {
+            // 先获取当前文件的 sha（PUT 必须带 sha）
+            const metaRes = await fetch(GITHUB_API_URL, { headers: { 'Authorization': 'token ' + GITHUB_TOKEN } });
+            let sha = _githubFileSha;
+            if (metaRes.ok) {
+                const meta = await metaRes.json();
+                sha = meta.sha;
+                _githubFileSha = sha;
             }
+            const content = btoa(unescape(encodeURIComponent(JSON.stringify(systemData, null, 2))));
+            const body = { message: 'update eval data', content, sha };
+            const res = await fetch(GITHUB_API_URL, {
+                method: 'PUT',
+                headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (res.ok) {
+                const j = await res.json();
+                _githubFileSha = j.content.sha;
+            } else {
+                const err = await res.text();
+                console.warn('pushToCloud 失败:', err);
+            }
+        } catch (e) {
+            console.warn('pushToCloud 异常:', e.message);
         }
     }
 
@@ -269,6 +278,24 @@
 
     function showMainInterface() {
         if (!systemData) systemData = JSON.parse(localStorage.getItem(STATE_KEY) || 'null') || { evaluations: {}, lastUpdated: new Date().toISOString() };
+        // 每次显示主界面时，重新从 localStorage 读取最新员工列表（管理端可能刚修改过）
+        const freshEmp = localStorage.getItem('employees_v2_data');
+        if (freshEmp) {
+            try {
+                const parsed = JSON.parse(freshEmp);
+                if (parsed.length > 0) {
+                    EMPLOYEES = parsed;
+                    // 同步更新当前用户信息
+                    if (currentUser) {
+                        const updated = parsed.find(e => e.id === currentUser.id);
+                        if (updated) {
+                            currentUser = { id: updated.id, name: updated.name, role: updated.role, email: updated.email || '' };
+                            localStorage.setItem('current_user_v2', JSON.stringify(currentUser));
+                        }
+                    }
+                }
+            } catch (e) {}
+        }
         document.getElementById('loginPage').classList.add('hidden');
         document.getElementById('mainPage').classList.remove('hidden');
         document.getElementById('userAvatar').textContent = currentUser.name[0];
@@ -413,6 +440,13 @@
         saveState(); initEvaluationPage();
         showToast('已清空评分', 'info');
     }
+
+    // 页面从后台切回来时，自动刷新员工列表和用户信息（管理端可能刚修改过）
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible' && currentUser) {
+            showMainInterface();
+        }
+    });
 
     init();
 </script>
