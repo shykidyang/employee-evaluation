@@ -208,10 +208,18 @@
                         systemData = cloudData;
                         localStorage.setItem(STATE_KEY, JSON.stringify(systemData));
                     }
-                    // 从云端同步员工列表（管理端新增的员工在此）
-                    if (cloudData.employees && cloudData.employees.length > EMPLOYEES.length) {
+                    // 从云端同步员工列表（管理端是数据源头，以云端为准）
+                    if (cloudData.employees && cloudData.employees.length > 0) {
                         EMPLOYEES = cloudData.employees;
                         localStorage.setItem('employees_v2_data', JSON.stringify(EMPLOYEES));
+                        // 如果当前登录用户的信息变了（如姓名修改），同步更新
+                        if (currentUser) {
+                            const updated = cloudData.employees.find(e => e.id === currentUser.id);
+                            if (updated) {
+                                currentUser = { id: updated.id, name: updated.name, role: updated.role, email: updated.email || '' };
+                                localStorage.setItem('current_user_v2', JSON.stringify(currentUser));
+                            }
+                        }
                     }
                 }
                 return; // 成功则退出
