@@ -77,10 +77,10 @@
         .editable-cell:hover { background: #f3f4f6; }
         .progress-bar { width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin-top: 6px; }
         .progress-fill { height: 100%; background: linear-gradient(135deg, #10b981 0%, #059669 100%); transition: width 0.3s; }
-        .rules-box { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 10px; padding: 14px; margin-bottom: 14px; border-left: 3px solid #f59e0b; }
-        .rules-box h4 { color: #92400e; margin-bottom: 6px; font-size: 13px; }
-        .rules-box ul { margin-left: 16px; color: #78350f; font-size: 12px; }
-        .rules-box li { margin-bottom: 3px; font-size: 12px; }
+        .rules-box { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; border-left: 3px solid #f59e0b; }
+        .rules-box h4 { color: #92400e; margin-bottom: 3px; font-size: 12px; }
+        .rules-box ul { margin-left: 14px; color: #78350f; font-size: 11px; }
+        .rules-box li { margin-bottom: 1px; font-size: 11px; }
         .toast { position: fixed; top: 12px; right: 12px; padding: 10px 18px; border-radius: 8px; color: white; font-weight: 500; z-index: 9999; font-size: 12px; animation: slideIn 0.3s, fadeOut 0.3s 2.7s; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         .toast-success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
         .toast-error { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
@@ -89,12 +89,12 @@
         @keyframes slideIn { from { opacity: 0; transform: translateX(100px); } to { opacity: 1; transform: translateX(0); } }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
         .admin-badge { display: inline-flex; align-items: center; gap: 4px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 4px 10px; border-radius: 14px; font-size: 11px; margin-bottom: 14px; }
-        .eval-item { background: #f9fafb; border-radius: 6px; padding: 9px 12px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
-        .eval-item-info { display: flex; align-items: center; gap: 8px; }
-        .eval-item-avatar { width: 30px; height: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; }
-        .eval-item-name { font-weight: 600; color: #374151; font-size: 13px; }
+        .eval-item { background: #f9fafb; border-radius: 6px; padding: 5px 10px; margin-bottom: 3px; display: flex; justify-content: space-between; align-items: center; }
+        .eval-item-info { display: flex; align-items: center; gap: 6px; }
+        .eval-item-avatar { width: 24px; height: 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 11px; }
+        .eval-item-name { font-weight: 600; color: #374151; font-size: 12px; }
         .eval-btn-group { display: inline-flex; border-radius: 6px; overflow: hidden; border: 1.5px solid #e0e6ed; }
-        .eval-btn { padding: 7px 14px; border: none; background: white; cursor: pointer; font-weight: bold; font-size: 13px; transition: all 0.2s; }
+        .eval-btn { padding: 4px 12px; border: none; background: white; cursor: pointer; font-weight: bold; font-size: 12px; transition: all 0.2s; }
         .eval-btn:not(:last-child) { border-right: 1px solid #e0e6ed; }
         .eval-btn:hover { background: #f3f4f6; }
         .eval-btn.selected { color: white; }
@@ -213,11 +213,11 @@
                     <div class="eval-stat mid"><div class="eval-stat-val" id="adminStat75">0</div><div class="eval-stat-lbl">75分（良好）</div></div>
                     <div class="eval-stat low"><div class="eval-stat-val" id="adminStat60">0</div><div class="eval-stat-lbl">60分（合格）</div></div>
                 </div>
-                <h3>&#128172; 请为每位员工评分</h3>
-                <p style="color:#6b7280;margin-bottom:14px;font-size:12px;">点击按钮选择评分档次</p>
+                <h3 style="font-size:14px;margin-bottom:6px;">&#128172; 请为每位员工评分</h3>
+                <p style="color:#6b7280;margin-bottom:14px;font-size:12px;">点击下方按钮选择评分档次</p>
                 <div id="adminEvalList"></div>
-                <div class="action-buttons">
-                    <button class="btn btn-success" onclick="submitAdminEvaluations()">&#9989; 提交评分</button>
+                <div class="action-buttons" style="margin-top:10px;">
+                    <button class="btn btn-success" onclick="submitAdminEvaluations()">&#9989; 提交评价</button>
                     <button class="btn btn-secondary" onclick="clearAdminEvaluations()">&#128465; 清空</button>
                 </div>
             </div>
@@ -562,9 +562,11 @@
     // ==========================================
     // 主界面与 Tab 切换
     // ==========================================
-    function showMainInterface() {
+    async function showMainInterface() {
         document.getElementById('loginPage').classList.add('hidden');
         document.getElementById('mainPage').classList.remove('hidden');
+        // 先同步云端数据，再初始化评价进度（确保能看到最新评价）
+        await forceSyncFromCloud();
         initStatusPage();
     }
 
@@ -575,11 +577,15 @@
         if (el) el.classList.remove('hidden');
         const btn = document.querySelector('.nav-tab[data-tab="' + tabName + '"]');
         if (btn) btn.classList.add('active');
-        if (tabName === 'status') { await forceSyncFromCloud(); initStatusPage(); }
-        else if (tabName === 'evaluate') { await forceSyncFromCloud(); initAdminEvaluate(); }
+        // 所有评价相关 Tab 切换前先同步云端数据
+        if (['status', 'evaluate', 'results'].includes(tabName)) {
+            await forceSyncFromCloud();
+        }
+        if (tabName === 'status') initStatusPage();
+        else if (tabName === 'evaluate') initAdminEvaluate();
         else if (tabName === 'sendlink') initSendLinkList();
         else if (tabName === 'employees') initEmployeesTable();
-        else if (tabName === 'results') { await forceSyncFromCloud(); initAdminResults(); }
+        else if (tabName === 'results') initAdminResults();
     }
 
     // ==========================================
@@ -596,22 +602,53 @@
             const done = cnt >= req;
             if (done) completed++;
             totalEvals += cnt;
-            details.push({ emp, cnt, req, done });
+            details.push({ emp, cnt, req, done, myEval: myEval || {} });
         });
         document.getElementById('evalTotalCount').textContent = EMPLOYEES.length;
         document.getElementById('evalCompletedCount').textContent = completed;
         document.getElementById('evalPendingCount').textContent = EMPLOYEES.length - completed;
         document.getElementById('totalEvaluations').textContent = totalEvals;
-        document.getElementById('progressList').innerHTML = details.map(d => {
+        document.getElementById('progressList').innerHTML = details.map((d, i) => {
             const pct = d.req > 0 ? Math.min(100, (d.cnt / d.req * 100)).toFixed(0) : 0;
             const clr = d.done ? '#10b981' : '#f59e0b';
             const tag = d.emp.role === 'director' ? ' <span style="color:#ef4444;font-size:11px;">[管理员]</span>' : d.emp.role === 'deputy' ? ' <span style="color:#f59e0b;font-size:11px;">[副职]</span>' : '';
-            return '<div style="margin-bottom:10px;padding:10px;background:#f9fafb;border-radius:8px;">' +
+            // 生成评价详情（谁被评了什么分）
+            let evalDetails = '';
+            const evalEntries = Object.entries(d.myEval);
+            if (evalEntries.length > 0) {
+                evalDetails = '<div style="margin-top:8px;padding:8px 10px;background:white;border-radius:6px;border:1px solid #e5e7eb;">';
+                evalEntries.forEach(([targetId, score]) => {
+                    const target = EMPLOYEES.find(e => e.id === targetId);
+                    const targetName = target ? target.name : '未知';
+                    const scoreColor = score === 90 ? '#059669' : score === 75 ? '#d97706' : '#dc2626';
+                    const scoreLabel = score === 90 ? '优秀' : score === 75 ? '良好' : '合格';
+                    evalDetails += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #f3f4f6;">' +
+                        '<span style="font-size:12px;color:#374151;">评给：<strong>' + targetName + '</strong></span>' +
+                        '<span style="font-size:12px;font-weight:600;color:' + scoreColor + ';">' + score + '分（' + scoreLabel + '）</span></div>';
+                });
+                evalDetails += '</div>';
+            } else {
+                evalDetails = '<div style="margin-top:8px;padding:8px 10px;background:white;border-radius:6px;border:1px solid #e5e7eb;font-size:12px;color:#9ca3af;">暂无评价记录</div>';
+            }
+            return '<div style="margin-bottom:10px;padding:10px;background:#f9fafb;border-radius:8px;cursor:pointer;" onclick="toggleProgressDetail(' + i + ')">' +
                 '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
                 '<span style="font-weight:500;">' + d.emp.name + tag + '</span>' +
-                '<span style="color:' + clr + ';font-size:13px;">' + d.cnt + '/' + d.req + ' ' + (d.done ? '&#9989; 已完成' : '&#9203; 进行中') + '</span></div>' +
-                '<div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%;background:' + clr + ';"></div></div></div>';
+                '<span style="color:' + clr + ';font-size:13px;">' + d.cnt + '/' + d.req + ' ' + (d.done ? '&#9989; 已完成' : '&#9203; 进行中') + ' <span id="progressArrow_' + i + '" style="font-size:10px;">&#9660;</span></span></div>' +
+                '<div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%;background:' + clr + ';"></div></div>' +
+                '<div id="progressDetail_' + i + '" style="display:none;">' + evalDetails + '</div></div>';
         }).join('');
+    }
+
+    function toggleProgressDetail(index) {
+        const detail = document.getElementById('progressDetail_' + index);
+        const arrow = document.getElementById('progressArrow_' + index);
+        if (detail.style.display === 'none') {
+            detail.style.display = 'block';
+            arrow.innerHTML = '&#9650;';
+        } else {
+            detail.style.display = 'none';
+            arrow.innerHTML = '&#9660;';
+        }
     }
 
     // ==========================================
